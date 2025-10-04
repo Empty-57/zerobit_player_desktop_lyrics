@@ -1,16 +1,10 @@
-# zerobit_player_desktop_lyrics
+# Zerobit Player Desktop Lyrics
+用于支持[Zerobit Plyaer](https://github.com/Empty-57/ZeroBit-Player)的桌面歌词组件
 
-zerobit_player_desktop_lyrics
+## 注意
+请将编译后的所有产物复制到 `Zerobit Plyaer` 的`desktop_lyrics` 目录下
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 截图
+![show](screenshot/12.png)
+![show](screenshot/13.png)
+![show](screenshot/14.png)
