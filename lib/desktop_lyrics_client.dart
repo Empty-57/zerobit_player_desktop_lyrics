@@ -147,7 +147,7 @@ class DesktopLyricsClient {
   void _dataHandle(Map<String, dynamic> data) {
     _desktopLyricsController.lrcType.value = data['lyricsType'];
 
-    if (_desktopLyricsController.lrcType.value != 'lrc') {
+    if (_desktopLyricsController.lrcType.value != '.lrc') {
       final line = (data['lyrics'] as List<dynamic>).map((v) {
         return WordEntry(
           start: v['start'],
