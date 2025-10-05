@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:zerobit_player_desktop_lyrics/tools/func_extension.dart';
 
 import 'package:zerobit_player_desktop_lyrics/tools/general_style.dart';
 
@@ -86,7 +87,7 @@ class ToolBar extends StatelessWidget {
                     tooltip: '上一首',
                     fn: () async {
                       _lyricsClient.sendCmd(cmdType: ClientCmdType.previous);
-                    },
+                    }.throttle(ms: 500),
                   ),
                   Obx(
                     () => _ControllerButton(
@@ -102,7 +103,7 @@ class ToolBar extends StatelessWidget {
                           : '播放',
                       fn: () async {
                         _lyricsClient.sendCmd(cmdType: ClientCmdType.toggle);
-                      },
+                      }.throttle(ms: 300),
                     ),
                   ),
                   _ControllerButton(
@@ -110,7 +111,7 @@ class ToolBar extends StatelessWidget {
                     tooltip: '下一首',
                     fn: () async {
                       _lyricsClient.sendCmd(cmdType: ClientCmdType.next);
-                    },
+                    }.throttle(ms: 500),
                   ),
                   _ControllerButton(
                     icon: PhosphorIconsLight.x,
@@ -137,7 +138,10 @@ class ToolBar extends StatelessWidget {
                 fn: () async {
                   _desktopLyricsController.isLock.value =
                       !_desktopLyricsController.isLock.value;
-                  _lyricsClient.sendCmd(cmdType: ClientCmdType.switchLock,cmdData: _desktopLyricsController.isLock.value);
+                  _lyricsClient.sendCmd(
+                    cmdType: ClientCmdType.switchLock,
+                    cmdData: _desktopLyricsController.isLock.value,
+                  );
                 },
               ),
             ),

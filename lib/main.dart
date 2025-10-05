@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_single_instance/flutter_single_instance.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:get/get.dart';
 import 'package:zerobit_player_desktop_lyrics/tool_bar.dart';
@@ -9,6 +12,12 @@ import 'getx_ctrl/desktop_lyrics_ctrl.dart';
 final _isHover = false.obs;
 
 void main() async {
+
+  if (!await FlutterSingleInstance().isFirstInstance()) {
+    await FlutterSingleInstance().focus();
+    exit(0);
+  }
+
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
 

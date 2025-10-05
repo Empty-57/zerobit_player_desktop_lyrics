@@ -45,8 +45,8 @@ abstract class ClientCmdType {
 
 class DesktopLyricsClient {
   final _wsUrl = Uri.parse('ws://127.0.0.1:7070');
-  late IOWebSocketChannel? _channel;
-  late StreamSubscription? _listen;
+  IOWebSocketChannel? _channel;
+  StreamSubscription? _listen;
 
   int reconnectCounter = 0;
 
@@ -98,7 +98,7 @@ class DesktopLyricsClient {
     final cmdData = data['cmdData'];
     switch (cmdType) {
       case SeverCmdType.shutdown:
-        close();
+        close(sendCmd_: false);
         return;
       case SeverCmdType.changeStatus:
         _desktopLyricsController.currentState.value = cmdData as int;
@@ -129,12 +129,10 @@ class DesktopLyricsClient {
         _desktopLyricsController.underColor.value = cmdData['underColor'];
         _desktopLyricsController.fontOpacity.value = cmdData['fontOpacity'];
         _desktopLyricsController.isLock.value = cmdData['isLock'];
-        _desktopLyricsController.windowDx.value = cmdData['dx'];
-        _desktopLyricsController.windowDy.value = cmdData['dy'];
         await windowManager.setPosition(
           Offset(
-            _desktopLyricsController.windowDx.value,
-            _desktopLyricsController.windowDy.value,
+            cmdData['dx']??50.0,
+            cmdData['dy']??50.0,
           ),
         );
         return;
@@ -189,9 +187,12 @@ class DesktopLyricsClient {
     } catch (_) {}
   }
 
-  void close() async {
+  void close({bool sendCmd_ = true}) async {
     try {
-      sendCmd(cmdType: ClientCmdType.close);
+      if(sendCmd_){
+        sendCmd(cmdType: ClientCmdType.close);
+      }
+
       if (_listen != null) {
         await _listen!.cancel();
         _listen = null;
@@ -204,6 +205,7 @@ class DesktopLyricsClient {
       await windowManager.close();
     } catch (e) {
       debugPrint(e.toString());
+      await windowManager.close();
     }
   }
 }

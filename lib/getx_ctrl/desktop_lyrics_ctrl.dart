@@ -19,8 +19,6 @@ class DesktopLyricsController extends GetxController with WindowListener {
   final fontOpacity = 1.0.obs;
 
   final isLock = false.obs;
-  final windowDx=50.0.obs;
-  final windowDy=50.0.obs;
 
   final currentWordIndex = 0.obs;
   final wordProgress = 0.0.obs;
@@ -92,7 +90,6 @@ class DesktopLyricsController extends GetxController with WindowListener {
   @override
   void onWindowClose() async {
     windowManager.removeListener(this);
-    _lyricsClient.close();
   }
 
   @override
