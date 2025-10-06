@@ -29,6 +29,7 @@ abstract class SeverCmdType {
   static const setUnderColor = 'setUnderColor';
   static const setFontOpacity = 'setFontOpacity';
   static const putConfig = 'putConfig';
+  static const setIgnoreMouseEvents = 'setIgnoreMouseEvents';
 }
 
 abstract class ClientCmdType {
@@ -121,6 +122,9 @@ class DesktopLyricsClient {
       case SeverCmdType.setFontOpacity:
         _desktopLyricsController.fontOpacity.value = cmdData.clamp(0.0, 1.0);
         return;
+      case SeverCmdType.setIgnoreMouseEvents:
+        await windowManager.setIgnoreMouseEvents(cmdData);
+        return;
       case SeverCmdType.putConfig:
         _desktopLyricsController.fontFamily.value = cmdData['fontFamily'];
         _desktopLyricsController.fontSize.value = cmdData['fontSize'];
@@ -135,6 +139,7 @@ class DesktopLyricsClient {
             cmdData['dy']??50.0,
           ),
         );
+        await windowManager.setIgnoreMouseEvents(cmdData['isIgnoreMouseEvents']??false);
         return;
     }
   }

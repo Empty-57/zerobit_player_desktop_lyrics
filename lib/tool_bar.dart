@@ -132,8 +132,8 @@ class ToolBar extends StatelessWidget {
               maintainState: true,
               child: _ControllerButton(
                 icon: _desktopLyricsController.isLock.value
-                    ? PhosphorIconsLight.lock
-                    : PhosphorIconsLight.lockOpen,
+                    ? PhosphorIconsFill.lock
+                    : PhosphorIconsFill.lockOpen,
                 tooltip: _desktopLyricsController.isLock.value ? '解锁' : '锁定',
                 fn: () async {
                   _desktopLyricsController.isLock.value =

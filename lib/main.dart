@@ -51,7 +51,6 @@ void main() async {
     await windowManager.setResizable(false);
     await windowManager.setAlwaysOnTop(true);
     await desktopLyricsController.calcSize();
-    // await windowManager.setIgnoreMouseEvents(true);
     await windowManager.show();
   });
   runApp(const MyApp());
