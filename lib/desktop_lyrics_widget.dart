@@ -66,7 +66,7 @@ class _LrcLyricWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: overlayStyle, softWrap: true);
+    return Text(text, style: overlayStyle.copyWith(overflow: TextOverflow.fade), softWrap: true,maxLines: 2,);
   }
 }
 
