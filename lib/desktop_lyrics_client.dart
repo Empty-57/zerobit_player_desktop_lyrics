@@ -139,7 +139,10 @@ class DesktopLyricsClient {
             cmdData['dy']??50.0,
           ),
         );
-        await windowManager.setIgnoreMouseEvents(cmdData['isIgnoreMouseEvents']??false);
+        final bool isIgnoreMouseEvents=cmdData['isIgnoreMouseEvents']??false;
+        if(isIgnoreMouseEvents){
+          await windowManager.setIgnoreMouseEvents(isIgnoreMouseEvents,forward: false);
+        }
         return;
     }
   }

@@ -25,9 +25,6 @@ void main() async {
   Get.put(DesktopLyricsClient());
 
   final DesktopLyricsClient lyricsClient = Get.find<DesktopLyricsClient>();
-  lyricsClient.connect();
-
-
   final DesktopLyricsController desktopLyricsController =
       Get.find<DesktopLyricsController>();
 
@@ -47,6 +44,7 @@ void main() async {
     title: 'ZeroBit Player Lyrics',
   );
   windowManager.waitUntilReadyToShow(windowOptions, () async {
+    lyricsClient.connect();
     await windowManager.setAsFrameless();
     await windowManager.setResizable(false);
     await windowManager.setAlwaysOnTop(true);
