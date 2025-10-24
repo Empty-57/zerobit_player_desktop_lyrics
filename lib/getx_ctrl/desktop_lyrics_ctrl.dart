@@ -26,6 +26,8 @@ class DesktopLyricsController extends GetxController with WindowListener {
   final currentLine = Rx<dynamic>('ZeroBit Player');
   final currentTranslate = ''.obs;
 
+  final lrcAlignment=1.obs;
+
   static const double widthIncrement = 12;
   static const double heightIncrement = 2.5;
   static const int fontSizeMin = 16;

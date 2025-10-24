@@ -7,6 +7,12 @@ import 'getx_ctrl/desktop_lyrics_ctrl.dart';
 final DesktopLyricsController _desktopLyricsController =
     Get.find<DesktopLyricsController>();
 
+const _lrcCrossAlignment = [
+  CrossAxisAlignment.start,
+  CrossAxisAlignment.center,
+  CrossAxisAlignment.end,
+];
+
 class _HighlightedWord extends StatelessWidget {
   final String text;
   final double progress;
@@ -325,6 +331,7 @@ class LyricsRender extends StatelessWidget {
       return Obx(() {
         final lrcType = _desktopLyricsController.lrcType.value;
         final currentLine = _desktopLyricsController.currentLine.value;
+        final lrcAlignment = _desktopLyricsController.lrcAlignment.value;
 
         if (currentLine == null) {
           return const SizedBox.shrink();
@@ -336,7 +343,7 @@ class LyricsRender extends StatelessWidget {
           opacity: _desktopLyricsController.fontOpacity.value,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: _lrcCrossAlignment[lrcAlignment], // 切换左右对齐以及居中
             children: [
               if (lrcType == LyricFormat.lrc)
                 _LrcLyricWidget(
@@ -358,7 +365,6 @@ class LyricsRender extends StatelessWidget {
                   strutStyle: strutStyle,
                   ctrl: _desktopLyricsController,
                 ),
-              // Text(currentTranslate, style: underStyle, softWrap: true,strutStyle: strutStyle,),
             ],
           ),
         );
