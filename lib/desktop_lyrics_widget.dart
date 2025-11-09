@@ -72,7 +72,12 @@ class _LrcLyricWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: overlayStyle.copyWith(overflow: TextOverflow.fade), softWrap: true,maxLines: 1,);
+    return Text(
+      text,
+      style: overlayStyle.copyWith(overflow: TextOverflow.fade),
+      softWrap: true,
+      maxLines: 1,
+    );
   }
 }
 
@@ -304,6 +309,14 @@ class _TranslateWidgetState extends State<_TranslateWidget> {
 class LyricsRender extends StatelessWidget {
   const LyricsRender({super.key});
 
+  List<String> _splitString(String str, int n) {
+    if (n <= 0) return str.split('');
+
+    return n >= str.length
+        ? str.split('')
+        : [...List.generate(n - 1, (i) => str[i]), str.substring(n - 1)];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
@@ -360,7 +373,7 @@ class LyricsRender extends StatelessWidget {
                 ),
               if (currentTranslate.isNotEmpty)
                 _TranslateWidget(
-                  text: currentTranslate.split(''),
+                  text: _splitString(currentTranslate, currentLine.length),
                   underStyle: underStyle,
                   strutStyle: strutStyle,
                   ctrl: _desktopLyricsController,
