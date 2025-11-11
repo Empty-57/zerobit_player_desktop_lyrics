@@ -50,20 +50,30 @@ class ToolBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 40,
-      width: context.width,
+      height: _desktopLyricsController.useVerticalDisplayMode.value
+          ? context.height
+          : DesktopLyricsController.toolBarHeight,
+      width: _desktopLyricsController.useVerticalDisplayMode.value
+          ? DesktopLyricsController.toolBarHeight
+          : context.width,
       color: Colors.transparent,
-      child: Row(
+      child: Flex(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         spacing: 6,
+        direction: _desktopLyricsController.useVerticalDisplayMode.value
+            ? Axis.vertical
+            : Axis.horizontal,
         children: [
           Obx(
             () => Visibility(
               visible: isHover.value && !_desktopLyricsController.isLock.value,
-              child: Row(
+              child: Flex(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
+                direction: _desktopLyricsController.useVerticalDisplayMode.value
+                    ? Axis.vertical
+                    : Axis.horizontal,
                 spacing: 6,
                 children: [
                   _ControllerButton(

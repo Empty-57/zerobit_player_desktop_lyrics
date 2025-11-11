@@ -32,6 +32,7 @@ TextStyle generalTextStyle<T>({
     fontWeight: weight ?? FontWeight.w400,
     decoration: decoration ?? TextDecoration.none,
     fontFamily: fontFamily??_desktopLyricsController.fontFamily.value,
+    height: 1.0
   );
 }
 

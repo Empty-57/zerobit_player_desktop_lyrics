@@ -26,7 +26,9 @@ class DesktopLyricsController extends GetxController with WindowListener {
   final currentLine = Rx<dynamic>('ZeroBit Player');
   final currentTranslate = ''.obs;
 
-  final lrcAlignment=1.obs;
+  final lrcAlignment = 1.obs;
+
+  final useVerticalDisplayMode = false.obs;
 
   static const double widthIncrement = 12;
   static const double heightIncrement = 2.5;
@@ -40,8 +42,9 @@ class DesktopLyricsController extends GetxController with WindowListener {
   static const double windowHeightMax =
       (fontSizeMax - fontSizeMin) * heightIncrement + windowHeightMin;
 
+  static const double toolBarHeight = 40;
 
-  DesktopLyricsClient get _lyricsClient =>Get.find<DesktopLyricsClient>();
+  DesktopLyricsClient get _lyricsClient => Get.find<DesktopLyricsClient>();
 
   Future<(double, double)> calcSize([bool setSize = true]) async {
     final w = ((fontSize.value - fontSizeMin) * widthIncrement + windowWidthMin)
@@ -50,8 +53,13 @@ class DesktopLyricsController extends GetxController with WindowListener {
     final h =
         (((fontSize.value - fontSizeMin) * heightIncrement + windowHeightMin)
                 .clamp(windowHeightMin, windowHeightMax))
-            .toDouble()+40;
+            .toDouble() +
+        toolBarHeight;
     if (setSize) {
+      if (useVerticalDisplayMode.value) {
+        await windowManager.setSize(Size(h, w));
+        return (h, w);
+      }
       await windowManager.setSize(Size(w, h));
     }
 
@@ -75,6 +83,10 @@ class DesktopLyricsController extends GetxController with WindowListener {
     calcSize();
   }
 
+  void setUseVerticalDisplayMode({required use}) {
+    useVerticalDisplayMode.value = use;
+    calcSize();
+  }
 
   @override
   void onInit() async {
@@ -97,7 +109,7 @@ class DesktopLyricsController extends GetxController with WindowListener {
   @override
   void onWindowMoved() async {
     final position = await windowManager.getPosition();
-    _lyricsClient.sendCmd(cmdType: ClientCmdType.setDx,cmdData: position.dx);
-    _lyricsClient.sendCmd(cmdType: ClientCmdType.setDy,cmdData: position.dy);
+    _lyricsClient.sendCmd(cmdType: ClientCmdType.setDx, cmdData: position.dx);
+    _lyricsClient.sendCmd(cmdType: ClientCmdType.setDy, cmdData: position.dy);
   }
 }

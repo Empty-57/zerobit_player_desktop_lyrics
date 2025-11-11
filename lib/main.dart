@@ -12,7 +12,6 @@ import 'getx_ctrl/desktop_lyrics_ctrl.dart';
 final _isHover = false.obs;
 
 void main() async {
-
   if (!await FlutterSingleInstance().isFirstInstance()) {
     await FlutterSingleInstance().focus();
     exit(0);
@@ -29,13 +28,15 @@ void main() async {
       Get.find<DesktopLyricsController>();
 
   WindowOptions windowOptions = WindowOptions(
-    minimumSize: Size(
-      DesktopLyricsController.windowWidthMin.toDouble(),
-      DesktopLyricsController.windowHeightMin.toDouble(),
-    ),
     size: Size(
-      DesktopLyricsController.windowWidthMax.toDouble(),
-      DesktopLyricsController.windowHeightMax.toDouble()+40,
+      desktopLyricsController.useVerticalDisplayMode.value
+          ? DesktopLyricsController.windowHeightMax.toDouble() +
+                DesktopLyricsController.toolBarHeight
+          : DesktopLyricsController.windowWidthMax.toDouble(),
+      desktopLyricsController.useVerticalDisplayMode.value
+          ? DesktopLyricsController.windowWidthMax.toDouble()
+          : DesktopLyricsController.windowHeightMax.toDouble() +
+                DesktopLyricsController.toolBarHeight,
     ),
     backgroundColor: Colors.transparent,
     skipTaskbar: true,
@@ -80,9 +81,13 @@ class MyApp extends StatelessWidget {
                 color: _isHover.value && !desktopLyricsController.isLock.value
                     ? Colors.black.withValues(alpha: 0.2)
                     : Colors.transparent,
-                child: Column(
+                child: Flex(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
+                  direction:
+                      desktopLyricsController.useVerticalDisplayMode.value
+                      ? Axis.horizontal
+                      : Axis.vertical,
                   children: [
                     ToolBar(isHover: _isHover),
                     Expanded(child: const LyricsRender()),

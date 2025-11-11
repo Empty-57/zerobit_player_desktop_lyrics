@@ -31,6 +31,7 @@ abstract class SeverCmdType {
   static const putConfig = 'putConfig';
   static const setIgnoreMouseEvents = 'setIgnoreMouseEvents';
   static const setLrcAlignment = 'setLrcAlignment';
+  static const setDisplayMode = 'setDisplayMode';
 }
 
 abstract class ClientCmdType {
@@ -129,6 +130,9 @@ class DesktopLyricsClient {
       case SeverCmdType.setLrcAlignment:
         _desktopLyricsController.lrcAlignment.value=cmdData;
         return;
+      case SeverCmdType.setDisplayMode:
+        _desktopLyricsController.setUseVerticalDisplayMode(use: cmdData);
+        return;
       case SeverCmdType.putConfig:
         _desktopLyricsController.fontFamily.value = cmdData['fontFamily'];
         _desktopLyricsController.fontSize.value = cmdData['fontSize'];
@@ -148,6 +152,7 @@ class DesktopLyricsClient {
           await windowManager.setIgnoreMouseEvents(isIgnoreMouseEvents,forward: false);
         }
         _desktopLyricsController.lrcAlignment.value=cmdData['lrcAlignment'];
+        _desktopLyricsController.useVerticalDisplayMode.value=cmdData['displayMode'];
         return;
     }
   }
