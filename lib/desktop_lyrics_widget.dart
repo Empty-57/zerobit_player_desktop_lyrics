@@ -27,12 +27,28 @@ class _TextDisplayWidget extends StatelessWidget {
     required this.displayMode,
   });
 
+
+  bool _isAlphanumeric(String input) {
+  RegExp regExp = RegExp(r"^[a-zA-Z0-9\s']+$"); //匹配英文字母、数字和空格
+  return regExp.hasMatch(input);
+}
+
   @override
   Widget build(BuildContext context) {
     // 单字符直接使用 Text，多字符使用 Flex 拆分
-    if (text.length == 1) {
+
+    final isAlphanumeric=_isAlphanumeric(text);
+    if ((text.length == 1&&!isAlphanumeric)||displayMode==Axis.horizontal) {
       return Text(text, style: style, strutStyle: strutStyle);
     } else {
+
+      if(isAlphanumeric){
+        return RotatedBox(
+          quarterTurns: 1,
+          child: Text(text, style: style, strutStyle: strutStyle)
+        );
+      }
+
       return Flex(
         direction: displayMode,
         mainAxisAlignment: MainAxisAlignment.center,
