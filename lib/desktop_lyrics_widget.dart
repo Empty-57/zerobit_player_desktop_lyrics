@@ -29,7 +29,7 @@ class _TextDisplayWidget extends StatelessWidget {
 
 
   bool _isAlphanumeric(String input) {
-  RegExp regExp = RegExp(r"^[a-zA-Z0-9\s']+$"); //匹配英文字母、数字和空格
+  RegExp regExp = RegExp(r'''^[A-Za-z0-9 !"'?.,:;()\[\]\-《》「」（）：/“”]+$'''); //匹配英文字母、数字和空格以及部分标点
   return regExp.hasMatch(input);
 }
 
@@ -42,13 +42,6 @@ class _TextDisplayWidget extends StatelessWidget {
       return Text(text, style: style, strutStyle: strutStyle);
     } else {
 
-      if(isAlphanumeric){
-        return RotatedBox(
-          quarterTurns: 1,
-          child: Text(text, style: style, strutStyle: strutStyle)
-        );
-      }
-
       return Flex(
         direction: displayMode,
         mainAxisAlignment: MainAxisAlignment.center,
@@ -56,7 +49,15 @@ class _TextDisplayWidget extends StatelessWidget {
         clipBehavior: Clip.none,
         children: text
             .split('')
-            .map((char) => Text(char, style: style, strutStyle: strutStyle))
+            .map((char){
+              if(_isAlphanumeric(char)){
+        return RotatedBox(
+          quarterTurns: 1,
+          child: Text(char, style: style, strutStyle: strutStyle)
+        );
+      }
+              return Text(char, style: style, strutStyle: strutStyle);
+        })
             .toList(),
       );
     }
@@ -372,7 +373,7 @@ class _TranslateWidgetState extends State<_TranslateWidget> {
       ctx,
       duration: const Duration(milliseconds: 200),
       curve: Curves.linear,
-      alignment: 0.4,
+      alignment: 0.2,
     );
   }
 
