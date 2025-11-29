@@ -32,6 +32,8 @@ abstract class SeverCmdType {
   static const setIgnoreMouseEvents = 'setIgnoreMouseEvents';
   static const setLrcAlignment = 'setLrcAlignment';
   static const setDisplayMode = 'setDisplayMode';
+  static const setStrokeEnable='setStrokeEnable';
+  static const setStrokeColor='setStrokeColor';
 }
 
 abstract class ClientCmdType {
@@ -133,6 +135,12 @@ class DesktopLyricsClient {
       case SeverCmdType.setDisplayMode:
         _desktopLyricsController.setUseVerticalDisplayMode(use: cmdData);
         return;
+      case SeverCmdType.setStrokeEnable:
+        _desktopLyricsController.useStroke.value=cmdData;
+        return;
+      case SeverCmdType.setStrokeColor:
+        _desktopLyricsController.strokeColor.value=cmdData;
+        return;
       case SeverCmdType.putConfig:
         _desktopLyricsController.fontFamily.value = cmdData['fontFamily'];
         _desktopLyricsController.fontSize.value = cmdData['fontSize'];
@@ -153,6 +161,8 @@ class DesktopLyricsClient {
         }
         _desktopLyricsController.lrcAlignment.value=cmdData['lrcAlignment'];
         _desktopLyricsController.useVerticalDisplayMode.value=cmdData['displayMode'];
+        _desktopLyricsController.useStroke.value=cmdData['useStroke'];
+        _desktopLyricsController.strokeColor.value=cmdData['strokeColor'];
         return;
     }
   }

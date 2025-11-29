@@ -19,46 +19,60 @@ class _TextDisplayWidget extends StatelessWidget {
   final TextStyle style;
   final StrutStyle? strutStyle;
   final Axis displayMode;
+  final bool useStroke;
+  final int strokeColor;
 
   const _TextDisplayWidget({
     required this.text,
     required this.style,
     this.strutStyle,
     required this.displayMode,
+    required this.useStroke,
+    required this.strokeColor,
   });
 
-
   bool _isAlphanumeric(String input) {
-  RegExp regExp = RegExp(r'''^[A-Za-z0-9 !"'?.,:;()\[\]\-《》「」（）：/“”]+$'''); //匹配英文字母、数字和空格以及部分标点
-  return regExp.hasMatch(input);
-}
+    RegExp regExp = RegExp(
+      r'''^[A-Za-z0-9 !"'?.,:;()\[\]\-《》「」（）：/“”]+$''',
+    ); //匹配英文字母、数字和空格以及部分标点
+    return regExp.hasMatch(input);
+  }
+
+  Widget _createText({required String char}) {
+    final style_ = useStroke
+        ? style.copyWith(
+            shadows: [
+              Shadow(
+                color: Color(strokeColor),
+                offset: Offset(-1.2, -1.2),
+                blurRadius: 1.5,
+              ),
+            ],
+          )
+        : style;
+    return Text(char, style: style_, strutStyle: strutStyle);
+  }
 
   @override
   Widget build(BuildContext context) {
     // 单字符直接使用 Text，多字符使用 Flex 拆分
 
-    final isAlphanumeric=_isAlphanumeric(text);
-    if ((text.length == 1&&!isAlphanumeric)||displayMode==Axis.horizontal) {
-      return Text(text, style: style, strutStyle: strutStyle);
+    final isAlphanumeric = _isAlphanumeric(text);
+    if ((text.length == 1 && !isAlphanumeric) ||
+        displayMode == Axis.horizontal) {
+      return _createText(char: text);
     } else {
-
       return Flex(
         direction: displayMode,
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         clipBehavior: Clip.none,
-        children: text
-            .split('')
-            .map((char){
-              if(_isAlphanumeric(char)){
-        return RotatedBox(
-          quarterTurns: 1,
-          child: Text(char, style: style, strutStyle: strutStyle)
-        );
-      }
-              return Text(char, style: style, strutStyle: strutStyle);
-        })
-            .toList(),
+        children: text.split('').map((char) {
+          if (_isAlphanumeric(char)) {
+            return RotatedBox(quarterTurns: 1, child: _createText(char: char));
+          }
+          return _createText(char: char);
+        }).toList(),
       );
     }
   }
@@ -74,6 +88,8 @@ class _HighlightedWord extends StatelessWidget {
   final Alignment begin;
   final Alignment end;
   final Axis displayMode;
+  final bool useStroke;
+  final int strokeColor;
 
   const _HighlightedWord({
     required this.text,
@@ -85,18 +101,13 @@ class _HighlightedWord extends StatelessWidget {
     required this.begin,
     required this.end,
     required this.displayMode,
+    required this.useStroke,
+    required this.strokeColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final Widget child = _TextDisplayWidget(
-      text: text,
-      style: underStyle,
-      strutStyle: strutStyle,
-      displayMode: displayMode,
-    );
-
-    return ShaderMask(
+    final shaderText = ShaderMask(
       shaderCallback: (bounds) {
         const double offsetFactor = -0.666;
         final double offset =
@@ -116,8 +127,34 @@ class _HighlightedWord extends StatelessWidget {
         ).createShader(bounds);
       },
       blendMode: BlendMode.srcIn,
-      child: child,
+      child: _TextDisplayWidget(
+        text: text,
+        style: underStyle,
+        strutStyle: strutStyle,
+        displayMode: displayMode,
+        useStroke: false,
+        strokeColor: strokeColor,
+      ),
     );
+
+    return useStroke
+        ? Stack(
+            children: [
+              // --- 第一层：负责显示阴影 ---
+              _TextDisplayWidget(
+                text: text,
+                style: underStyle.copyWith(color: Colors.transparent),
+                strutStyle: strutStyle,
+                displayMode: displayMode,
+                useStroke: true,
+                strokeColor: strokeColor,
+              ),
+
+              // --- 第二层：负责显示渐变 (ShaderMask) ---
+              shaderText,
+            ],
+          )
+        : shaderText;
   }
 }
 
@@ -155,11 +192,15 @@ class _LrcLyricWidget extends StatelessWidget {
   final String text;
   final TextStyle overlayStyle;
   final Axis displayMode;
+  final bool useStroke;
+  final int strokeColor;
 
   const _LrcLyricWidget({
     required this.text,
     required this.overlayStyle,
     required this.displayMode,
+    required this.useStroke,
+    required this.strokeColor,
   });
 
   @override
@@ -169,6 +210,8 @@ class _LrcLyricWidget extends StatelessWidget {
       style: overlayStyle,
       displayMode: displayMode,
       strutStyle: null,
+      useStroke: useStroke,
+      strokeColor: strokeColor,
     );
   }
 }
@@ -283,6 +326,8 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
                   begin: widget.begin,
                   end: widget.end,
                   displayMode: widget.displayMode,
+                  useStroke: widget.ctrl.useStroke.value,
+                  strokeColor: widget.ctrl.strokeColor.value,
                 ),
               );
             } else if (wordIndex < currWordIndex) {
@@ -293,6 +338,8 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
                 ),
                 strutStyle: widget.strutStyle,
                 displayMode: widget.displayMode,
+                useStroke: widget.ctrl.useStroke.value,
+                strokeColor: widget.ctrl.strokeColor.value,
               );
             } else {
               child = _TextDisplayWidget(
@@ -300,6 +347,8 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
                 style: widget.underStyle,
                 strutStyle: widget.strutStyle,
                 displayMode: widget.displayMode,
+                useStroke: widget.ctrl.useStroke.value,
+                strokeColor: widget.ctrl.strokeColor.value,
               );
             }
 
@@ -404,6 +453,8 @@ class _TranslateWidgetState extends State<_TranslateWidget> {
               style: widget.underStyle,
               strutStyle: widget.strutStyle,
               displayMode: widget.displayMode,
+              useStroke: widget.ctrl.useStroke.value,
+              strokeColor: widget.ctrl.strokeColor.value,
             );
 
             // 用 RepaintBoundary 降低局部重绘开销
@@ -484,6 +535,8 @@ class LyricsRender extends StatelessWidget {
                   text: currentLine as String,
                   overlayStyle: overlayStyle,
                   displayMode: displayMode,
+                  useStroke: _desktopLyricsController.useStroke.value,
+                  strokeColor: _desktopLyricsController.strokeColor.value,
                 )
               else
                 _KaraOkLyricWidget(
