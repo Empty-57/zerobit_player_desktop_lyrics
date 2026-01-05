@@ -37,7 +37,7 @@ class DesktopLyricsController extends GetxController with WindowListener {
   static const double widthIncrement = 12;
   static const double heightIncrement = 2.5;
   static const int fontSizeMin = 16;
-  static const int fontSizeMax = 36;
+  static const int fontSizeMax = 48;
   static const int windowWidthMin = 400;
   static const int windowHeightMin = 100;
 
