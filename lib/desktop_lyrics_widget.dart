@@ -1,82 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:zerobit_player_desktop_lyrics/tools/lrcTool/lyrics_text_display_widget.dart';
 import '../tools/general_style.dart';
 import '../tools/lrcTool/lyric_model.dart';
+import 'desktop_lyrics_client.dart';
 import 'getx_ctrl/desktop_lyrics_ctrl.dart';
 
 final DesktopLyricsController _desktopLyricsController =
     Get.find<DesktopLyricsController>();
-
+final DesktopLyricsClient _lyricsClient = Get.find<DesktopLyricsClient>();
 const _lrcCrossAlignment = [
   CrossAxisAlignment.start,
   CrossAxisAlignment.center,
   CrossAxisAlignment.end,
+  CrossAxisAlignment.start,
 ];
-
-/// 抽象出通用的文本展示Widget，避免重复的Flex布局
-class _TextDisplayWidget extends StatelessWidget {
-  final String text;
-  final TextStyle style;
-  final StrutStyle? strutStyle;
-  final Axis displayMode;
-  final bool useStroke;
-  final int strokeColor;
-
-  const _TextDisplayWidget({
-    required this.text,
-    required this.style,
-    this.strutStyle,
-    required this.displayMode,
-    required this.useStroke,
-    required this.strokeColor,
-  });
-
-  bool _isAlphanumeric(String input) {
-    RegExp regExp = RegExp(
-      r'''^[A-Za-z0-9 !"'?.,:;()\[\]\-《》「」（）：/“”]+$''',
-    ); //匹配英文字母、数字和空格以及部分标点
-    return regExp.hasMatch(input);
-  }
-
-  Widget _createText({required String char}) {
-    final style_ = useStroke
-        ? style.copyWith(
-            shadows: [
-              Shadow(
-                color: Color(strokeColor),
-                offset: Offset(-1.2, -1.2),
-                blurRadius: 1.5,
-              ),
-            ],
-          )
-        : style;
-    return Text(char, style: style_, strutStyle: strutStyle);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // 单字符直接使用 Text，多字符使用 Flex 拆分
-
-    final isAlphanumeric = _isAlphanumeric(text);
-    if ((text.length == 1 && !isAlphanumeric) ||
-        displayMode == Axis.horizontal) {
-      return _createText(char: text);
-    } else {
-      return Flex(
-        direction: displayMode,
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        clipBehavior: Clip.none,
-        children: text.split('').map((char) {
-          if (_isAlphanumeric(char)) {
-            return RotatedBox(quarterTurns: 1, child: _createText(char: char));
-          }
-          return _createText(char: char);
-        }).toList(),
-      );
-    }
-  }
-}
 
 class _HighlightedWord extends StatelessWidget {
   final String text;
@@ -127,7 +65,7 @@ class _HighlightedWord extends StatelessWidget {
         ).createShader(bounds);
       },
       blendMode: BlendMode.srcIn,
-      child: _TextDisplayWidget(
+      child: TextDisplayWidget(
         text: text,
         style: underStyle,
         strutStyle: strutStyle,
@@ -141,7 +79,7 @@ class _HighlightedWord extends StatelessWidget {
         ? Stack(
             children: [
               // --- 第一层：负责显示阴影 ---
-              _TextDisplayWidget(
+              TextDisplayWidget(
                 text: text,
                 style: underStyle.copyWith(color: Colors.transparent),
                 strutStyle: strutStyle,
@@ -205,7 +143,7 @@ class _LrcLyricWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _TextDisplayWidget(
+    return TextDisplayWidget(
       text: text,
       style: overlayStyle,
       displayMode: displayMode,
@@ -331,7 +269,7 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
                 ),
               );
             } else if (wordIndex < currWordIndex) {
-              child = _TextDisplayWidget(
+              child = TextDisplayWidget(
                 text: word,
                 style: widget.overlayStyle.copyWith(
                   color: widget.overlayStyle.color,
@@ -342,7 +280,7 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
                 strokeColor: widget.ctrl.strokeColor.value,
               );
             } else {
-              child = _TextDisplayWidget(
+              child = TextDisplayWidget(
                 text: word,
                 style: widget.underStyle,
                 strutStyle: widget.strutStyle,
@@ -448,7 +386,7 @@ class _TranslateWidgetState extends State<_TranslateWidget> {
             final wordIndex = entry.key;
             final word = entry.value;
 
-            Widget child = _TextDisplayWidget(
+            Widget child = TextDisplayWidget(
               text: word,
               style: widget.underStyle,
               strutStyle: widget.strutStyle,
@@ -513,7 +451,16 @@ class LyricsRender extends StatelessWidget {
       return Obx(() {
         final lrcType = _desktopLyricsController.lrcType.value;
         final currentLine = _desktopLyricsController.currentLine.value;
-        final lrcAlignment = _desktopLyricsController.lrcAlignment.value;
+        CrossAxisAlignment lrcAlignment =
+            _lrcCrossAlignment[_desktopLyricsController.lrcAlignment.value];
+
+        if (_desktopLyricsController.lrcAlignment.value == 3) {
+          if (_lyricsClient.lyricsCounter.value.isEven) {
+            lrcAlignment = _lrcCrossAlignment[0];
+          } else {
+            lrcAlignment = _lrcCrossAlignment[2];
+          }
+        }
 
         if (currentLine == null) {
           return const SizedBox.shrink();
@@ -525,7 +472,7 @@ class LyricsRender extends StatelessWidget {
           opacity: _desktopLyricsController.fontOpacity.value,
           child: Flex(
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: _lrcCrossAlignment[lrcAlignment], // 切换对齐方式
+            crossAxisAlignment: lrcAlignment, // 切换对齐方式
             direction: _desktopLyricsController.useVerticalDisplayMode.value
                 ? Axis.horizontal
                 : Axis.vertical,
@@ -553,7 +500,7 @@ class LyricsRender extends StatelessWidget {
                 _TranslateWidget(
                   text: _splitString(currentTranslate, currentLine.length),
                   underStyle: underStyle,
-                  strutStyle: displayMode == Axis.vertical ? null : strutStyle,
+                  strutStyle: null,
                   ctrl: _desktopLyricsController,
                   displayMode: displayMode,
                 ),

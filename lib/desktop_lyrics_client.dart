@@ -15,6 +15,7 @@ final DesktopLyricsController _desktopLyricsController =
 
 abstract class _SeverMessageType {
   static const data = 'data';
+  static const nextData = 'nextData';
   static const position = 'position';
   static const cmd = 'cmd';
 }
@@ -64,6 +65,8 @@ class DesktopLyricsClient {
   Timer? _heartbeatTimeoutTimer;
 
   int _reconnectCounter = 0;
+
+  final lyricsCounter = 0.obs;
 
   void connect() async {
     _channel = IOWebSocketChannel.connect(_wsUrl);
@@ -130,6 +133,8 @@ class DesktopLyricsClient {
           return _positionHandle(data);
         case _SeverMessageType.data:
           return _dataHandle(data);
+        case _SeverMessageType.nextData:
+          return _nextDataHandle(data);
       }
     } catch (e) {
       debugPrint(e.toString());
@@ -205,7 +210,10 @@ class DesktopLyricsClient {
             cmdData['displayMode'];
         _desktopLyricsController.useStroke.value = cmdData['useStroke'];
         _desktopLyricsController.strokeColor.value = cmdData['strokeColor'];
-        await _desktopLyricsController.calcSize(cmdData['windowWidth']??DesktopLyricsController.windowWidthMin, cmdData['windowHeight']??DesktopLyricsController.windowHeightMin);
+        await _desktopLyricsController.calcSize(
+          cmdData['windowWidth'] ?? DesktopLyricsController.windowWidthMin,
+          cmdData['windowHeight'] ?? DesktopLyricsController.windowHeightMin,
+        );
         return;
     }
   }
@@ -233,6 +241,30 @@ class DesktopLyricsClient {
     }
 
     _desktopLyricsController.currentTranslate.value = data['translate'];
+
+    lyricsCounter.value++;
+  }
+
+  void _nextDataHandle(Map<String, dynamic> data) {
+    _desktopLyricsController.lrcType.value = data['lyricsType'];
+
+    if (_desktopLyricsController.lrcType.value != '.lrc') {
+      final line = (data['lyrics'] as List<dynamic>).map((v) {
+        if (v == null) {
+          return WordEntry(start: 0.0, duration: 0.0, lyricWord: '');
+        }
+        return WordEntry(
+          start: v['start'],
+          duration: v['duration'],
+          lyricWord: v['lyricWord'],
+        );
+      }).toList();
+
+      _desktopLyricsController.nextLine.value = line;
+    } else {
+      _desktopLyricsController.nextLine.value = data['lyrics'];
+    }
+    _desktopLyricsController.nextTranslate.value = data['translate'];
   }
 
   void _add(dynamic msg) {

@@ -26,6 +26,8 @@ class DesktopLyricsController extends GetxController with WindowListener {
   final lrcType = LyricFormat.lrc.obs;
   final currentLine = Rx<dynamic>('ZeroBit Player');
   final currentTranslate = ''.obs;
+  final nextLine = Rx<dynamic>('ZeroBit Player');
+  final nextTranslate = ''.obs;
 
   final lrcAlignment = 1.obs;
 
