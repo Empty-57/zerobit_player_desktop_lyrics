@@ -37,6 +37,8 @@ class DesktopLyricsController extends GetxController with WindowListener {
 
   final strokeColor = 0xff000000.obs;
 
+  final showDoubleLine=false.obs;
+
   static const double widthIncrement = 12;
   static const double heightIncrement = 2.5;
   static const int fontSizeMin = 16;

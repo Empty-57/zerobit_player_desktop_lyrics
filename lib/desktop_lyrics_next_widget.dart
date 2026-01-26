@@ -143,7 +143,7 @@ class LyricsNextRender extends StatelessWidget {
         CrossAxisAlignment lrcAlignment =
             _lrcCrossAlignment[_desktopLyricsController.lrcAlignment.value];
 
-        if (_desktopLyricsController.lrcAlignment.value == 3) {
+        if (_desktopLyricsController.lrcAlignment.value == 3&&_desktopLyricsController.showDoubleLine.value) {
           if (_lyricsClient.lyricsCounter.value.isEven) {
             lrcAlignment = _lrcCrossAlignment[2];
           } else {

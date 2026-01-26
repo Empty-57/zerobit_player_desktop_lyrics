@@ -86,7 +86,7 @@ class MyApp extends StatelessWidget {
             child: Stack(
               children: [
                 Obx(() {
-                  final Widget currLyrics = Expanded(
+                  Widget currLyrics = Expanded(
                     child: lyricsClient.lyricsCounter.value.isEven
                         ? const LyricsRender()
                         : const LyricsNextRender(),
@@ -111,6 +111,11 @@ class MyApp extends StatelessWidget {
                           ? const LyricsNextRender()
                           : const LyricsRender(),
                     );
+                  }
+
+                  if (!desktopLyricsController.showDoubleLine.value) {
+                    nextLyrics = SizedBox.shrink();
+                    currLyrics = Expanded(child: const LyricsRender());
                   }
 
                   return Container(
