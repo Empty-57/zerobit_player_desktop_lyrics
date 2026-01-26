@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:get/get.dart';
@@ -30,16 +31,16 @@ class DesktopLyricsController extends GetxController with WindowListener {
 
   final useVerticalDisplayMode = false.obs;
 
-  final useStroke =true.obs;
+  final useStroke = true.obs;
 
-  final strokeColor=0xff000000.obs;
+  final strokeColor = 0xff000000.obs;
 
   static const double widthIncrement = 12;
   static const double heightIncrement = 2.5;
   static const int fontSizeMin = 16;
   static const int fontSizeMax = 48;
-  static const int windowWidthMin = 400;
-  static const int windowHeightMin = 100;
+  static const int windowWidthMin = 450;
+  static const int windowHeightMin = 150;
 
   static const double windowWidthMax =
       (fontSizeMax - fontSizeMin) * widthIncrement + windowWidthMin;
@@ -50,41 +51,46 @@ class DesktopLyricsController extends GetxController with WindowListener {
 
   DesktopLyricsClient get _lyricsClient => Get.find<DesktopLyricsClient>();
 
-  Future<(double, double)> calcSize([bool setSize = true]) async {
-    final w = ((fontSize.value - fontSizeMin) * widthIncrement + windowWidthMin)
-        .clamp(windowWidthMin, windowWidthMax)
-        .toDouble();
-    final h =
-        (((fontSize.value - fontSizeMin) * heightIncrement + windowHeightMin)
-                .clamp(windowHeightMin, windowHeightMax))
-            .toDouble() +
-        toolBarHeight;
-    if (setSize) {
-      if (useVerticalDisplayMode.value) {
-        await windowManager.setSize(Size(h, w));
-        return (h, w);
+  Future<void> calcSize([double? w, double? h]) async {
+    final size = await windowManager.getSize();
+    if (w != null && h != null) {
+      double hh = h;
+      double ww = w;
+      if (useVerticalDisplayMode.value) { //判断窄边
+        w = min(hh, ww);
+        h = max(hh, ww);
+      } else {
+        w = max(hh, ww);
+        h = min(hh, ww);
       }
-      await windowManager.setSize(Size(w, h));
     }
 
-    return (w, h);
+    w ??= size.height;
+    h ??= size.width;
+    if (useVerticalDisplayMode.value) {
+      await windowManager.setMinimumSize(
+        Size(windowHeightMin.toDouble(), windowWidthMin.toDouble()),
+      );
+    } else {
+      await windowManager.setMinimumSize(
+        Size(windowWidthMin.toDouble(), windowHeightMin.toDouble()),
+      );
+    }
+    await windowManager.setSize(Size(w, h));
   }
 
   void addFontSize() async {
     fontSize.value++;
     fontSize.value = fontSize.value.clamp(fontSizeMin, fontSizeMax);
-    calcSize();
   }
 
   void decFontSize() async {
     fontSize.value--;
     fontSize.value = fontSize.value.clamp(fontSizeMin, fontSizeMax);
-    calcSize();
   }
 
   void setFontSize({required int size}) {
     fontSize.value = size.clamp(fontSizeMin, fontSizeMax);
-    calcSize();
   }
 
   void setUseVerticalDisplayMode({required use}) {
@@ -94,7 +100,6 @@ class DesktopLyricsController extends GetxController with WindowListener {
 
   @override
   void onInit() async {
-    await calcSize();
     windowManager.addListener(this);
     super.onInit();
   }
@@ -115,5 +120,18 @@ class DesktopLyricsController extends GetxController with WindowListener {
     final position = await windowManager.getPosition();
     _lyricsClient.sendCmd(cmdType: ClientCmdType.setDx, cmdData: position.dx);
     _lyricsClient.sendCmd(cmdType: ClientCmdType.setDy, cmdData: position.dy);
+  }
+
+  @override
+  void onWindowResized() async {
+    final size = await windowManager.getSize();
+    _lyricsClient.sendCmd(
+      cmdType: ClientCmdType.setWindowWidth,
+      cmdData: size.width,
+    );
+    _lyricsClient.sendCmd(
+      cmdType: ClientCmdType.setWindowHeight,
+      cmdData: size.height,
+    );
   }
 }

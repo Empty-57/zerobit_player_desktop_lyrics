@@ -47,9 +47,9 @@ void main() async {
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     lyricsClient.connect();
     await windowManager.setAsFrameless();
-    await windowManager.setResizable(false);
+    await windowManager.setResizable(true);
     await windowManager.setAlwaysOnTop(true);
-    await desktopLyricsController.calcSize();
+    // await desktopLyricsController.calcSize();
     await windowManager.show();
   });
   runApp(const MyApp());
@@ -57,6 +57,8 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
+  final double _resizeAreaSize = 10.0;
 
   @override
   Widget build(BuildContext context) {
@@ -74,12 +76,14 @@ class MyApp extends StatelessWidget {
           child: MouseRegion(
             onEnter: (_) => _isHover.value = true,
             onExit: (_) => _isHover.value = false,
-            child: Obx(
+            child: Stack(
+              children: [
+                Obx(
               () => Container(
                 width: constraints.maxWidth,
                 height: constraints.maxHeight,
                 color: _isHover.value && !desktopLyricsController.isLock.value
-                    ? Colors.black.withValues(alpha: 0.2)
+                    ? Colors.black.withValues(alpha: 0.4)
                     : Colors.transparent,
                 child: Flex(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -94,6 +98,152 @@ class MyApp extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+
+                // 左侧调整大小热区
+        Positioned(
+          left: 0,
+          top: _resizeAreaSize, // 避开顶部标题栏
+          bottom: _resizeAreaSize,
+          width: _resizeAreaSize,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.resizeLeftRight,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onPanStart: (_) {
+                windowManager.startResizing(ResizeEdge.left);
+              },
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+        ),
+
+        // 右侧调整大小热区
+        Positioned(
+          right: 0,
+          top: _resizeAreaSize,
+          bottom: _resizeAreaSize,
+          width: _resizeAreaSize,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.resizeLeftRight,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onPanStart: (_) {
+                windowManager.startResizing(ResizeEdge.right);
+              },
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+        ),
+
+        // 顶部调整大小热区（标题栏下方）
+        Positioned(
+          top: 0,
+          left: _resizeAreaSize,
+          right: _resizeAreaSize,
+          height: _resizeAreaSize,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.resizeUpDown,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onPanStart: (_) {
+                windowManager.startResizing(ResizeEdge.top);
+              },
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+        ),
+
+        // 底部调整大小热区
+        Positioned(
+          bottom: 0,
+          left: _resizeAreaSize,
+          right: _resizeAreaSize,
+          height: _resizeAreaSize,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.resizeUpDown,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onPanStart: (_) {
+                windowManager.startResizing(ResizeEdge.bottom);
+              },
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+        ),
+
+        // 左上角调整大小热区
+        Positioned(
+          left: 0,
+          top: 0,
+          width: _resizeAreaSize,
+          height: _resizeAreaSize,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.resizeUpLeftDownRight,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onPanStart: (_) {
+                windowManager.startResizing(ResizeEdge.topLeft);
+              },
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+        ),
+
+        // 右上角调整大小热区
+        Positioned(
+          right: 0,
+          top: 0,
+          width: _resizeAreaSize,
+          height: _resizeAreaSize,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.resizeUpRightDownLeft,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onPanStart: (_) {
+                windowManager.startResizing(ResizeEdge.topRight);
+              },
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+        ),
+
+        // 左下角调整大小热区
+        Positioned(
+          left: 0,
+          bottom: 0,
+          width: _resizeAreaSize,
+          height: _resizeAreaSize,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.resizeUpRightDownLeft,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onPanStart: (_) {
+                windowManager.startResizing(ResizeEdge.bottomLeft);
+              },
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+        ),
+
+        // 右下角调整大小热区
+        Positioned(
+          right: 0,
+          bottom: 0,
+          width: _resizeAreaSize,
+          height: _resizeAreaSize,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.resizeUpLeftDownRight,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onPanStart: (_) {
+                windowManager.startResizing(ResizeEdge.bottomRight);
+              },
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+        ),
+              ],
             ),
           ),
         ),

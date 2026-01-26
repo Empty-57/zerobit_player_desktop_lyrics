@@ -19,7 +19,7 @@ abstract class _SeverMessageType {
   static const cmd = 'cmd';
 }
 
-abstract class SeverCmdType {
+abstract class _SeverCmdType {
   static const shutdown = 'shutdown';
   static const changeStatus = 'changeStatus';
   static const setFontSize = 'setFontSize';
@@ -32,8 +32,9 @@ abstract class SeverCmdType {
   static const setIgnoreMouseEvents = 'setIgnoreMouseEvents';
   static const setLrcAlignment = 'setLrcAlignment';
   static const setDisplayMode = 'setDisplayMode';
-  static const setStrokeEnable='setStrokeEnable';
-  static const setStrokeColor='setStrokeColor';
+  static const setStrokeEnable = 'setStrokeEnable';
+  static const setStrokeColor = 'setStrokeColor';
+  static const heartBeat = 'heartBeat';
 }
 
 abstract class ClientCmdType {
@@ -46,6 +47,9 @@ abstract class ClientCmdType {
   static const switchLock = 'switchLock';
   static const setDx = 'setDx';
   static const setDy = 'setDy';
+  static const heartBeat = 'heartBeat';
+  static const setWindowWidth = 'setWindowWidth';
+  static const setWindowHeight = 'setWindowHeight';
 }
 
 class DesktopLyricsClient {
@@ -53,7 +57,13 @@ class DesktopLyricsClient {
   IOWebSocketChannel? _channel;
   StreamSubscription? _listen;
 
-  int reconnectCounter = 0;
+  final _heartbeatInterval = const Duration(seconds: 10);
+  final _heartbeatTimeout = const Duration(seconds: 5);
+
+  Timer? _heartbeatTimer;
+  Timer? _heartbeatTimeoutTimer;
+
+  int _reconnectCounter = 0;
 
   void connect() async {
     _channel = IOWebSocketChannel.connect(_wsUrl);
@@ -63,13 +73,13 @@ class DesktopLyricsClient {
     } catch (e) {
       debugPrint(e.toString());
       Timer(Duration(seconds: 2), () async {
-        reconnectCounter++;
-        if (reconnectCounter > 15) {
+        _reconnectCounter++;
+        if (_reconnectCounter > 15) {
           debugPrint('Reconnect failed!');
           await windowManager.close();
           return;
         }
-        debugPrint('reconnect on $reconnectCounter');
+        debugPrint('reconnect on $_reconnectCounter');
         connect();
       });
       return;
@@ -78,6 +88,34 @@ class DesktopLyricsClient {
     _add('ok');
     _listen = _channel!.stream.listen((message) async {
       _messageHandle(message);
+    });
+    _startHeartbeat();
+  }
+
+  void _startHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimeoutTimer?.cancel();
+    _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
+      _sendHeartbeat();
+      _startHeartbeatTimeout();
+    });
+  }
+
+  void _sendHeartbeat() {
+    try {
+      final jsonData = jsonEncode({
+        'type': 'clientCmd',
+        'cmdType': ClientCmdType.heartBeat,
+        'cmdData': 'ping',
+      });
+      _add(jsonData);
+    } catch (_) {}
+  }
+
+  void _startHeartbeatTimeout() {
+    _heartbeatTimeoutTimer?.cancel();
+    _heartbeatTimeoutTimer = Timer(_heartbeatTimeout, () async {
+      await windowManager.close();
     });
   }
 
@@ -102,46 +140,48 @@ class DesktopLyricsClient {
     final cmdType = data['cmdType'];
     final cmdData = data['cmdData'];
     switch (cmdType) {
-      case SeverCmdType.shutdown:
+      case _SeverCmdType.shutdown:
         close(sendCmd_: false);
         return;
-      case SeverCmdType.changeStatus:
+      case _SeverCmdType.changeStatus:
         _desktopLyricsController.currentState.value = cmdData as int;
         return;
-      case SeverCmdType.setFontSize:
+      case _SeverCmdType.setFontSize:
         _desktopLyricsController.setFontSize(size: cmdData);
         return;
-      case SeverCmdType.setFontWeight:
+      case _SeverCmdType.setFontWeight:
         _desktopLyricsController.fontWeight.value = cmdData.clamp(0, 8);
         return;
-      case SeverCmdType.setFontFamily:
+      case _SeverCmdType.setFontFamily:
         _desktopLyricsController.fontFamily.value = cmdData;
         return;
-      case SeverCmdType.setOverlayColor:
+      case _SeverCmdType.setOverlayColor:
         _desktopLyricsController.overlayColor.value = cmdData;
         return;
-      case SeverCmdType.setUnderColor:
+      case _SeverCmdType.setUnderColor:
         _desktopLyricsController.underColor.value = cmdData;
         return;
-      case SeverCmdType.setFontOpacity:
+      case _SeverCmdType.setFontOpacity:
         _desktopLyricsController.fontOpacity.value = cmdData.clamp(0.0, 1.0);
         return;
-      case SeverCmdType.setIgnoreMouseEvents:
+      case _SeverCmdType.setIgnoreMouseEvents:
         await windowManager.setIgnoreMouseEvents(cmdData);
         return;
-      case SeverCmdType.setLrcAlignment:
-        _desktopLyricsController.lrcAlignment.value=cmdData;
+      case _SeverCmdType.setLrcAlignment:
+        _desktopLyricsController.lrcAlignment.value = cmdData;
         return;
-      case SeverCmdType.setDisplayMode:
+      case _SeverCmdType.setDisplayMode:
         _desktopLyricsController.setUseVerticalDisplayMode(use: cmdData);
         return;
-      case SeverCmdType.setStrokeEnable:
-        _desktopLyricsController.useStroke.value=cmdData;
+      case _SeverCmdType.setStrokeEnable:
+        _desktopLyricsController.useStroke.value = cmdData;
         return;
-      case SeverCmdType.setStrokeColor:
-        _desktopLyricsController.strokeColor.value=cmdData;
+      case _SeverCmdType.setStrokeColor:
+        _desktopLyricsController.strokeColor.value = cmdData;
         return;
-      case SeverCmdType.putConfig:
+      case _SeverCmdType.heartBeat:
+        return _heartbeatTimeoutTimer?.cancel();
+      case _SeverCmdType.putConfig:
         _desktopLyricsController.fontFamily.value = cmdData['fontFamily'];
         _desktopLyricsController.fontSize.value = cmdData['fontSize'];
         _desktopLyricsController.fontWeight.value = cmdData['fontWeight'];
@@ -150,19 +190,22 @@ class DesktopLyricsClient {
         _desktopLyricsController.fontOpacity.value = cmdData['fontOpacity'];
         _desktopLyricsController.isLock.value = cmdData['isLock'];
         await windowManager.setPosition(
-          Offset(
-            cmdData['dx']??50.0,
-            cmdData['dy']??50.0,
-          ),
+          Offset(cmdData['dx'] ?? 50.0, cmdData['dy'] ?? 50.0),
         );
-        final bool isIgnoreMouseEvents=cmdData['isIgnoreMouseEvents']??false;
-        if(isIgnoreMouseEvents){
-          await windowManager.setIgnoreMouseEvents(isIgnoreMouseEvents,forward: false);
+        final bool isIgnoreMouseEvents =
+            cmdData['isIgnoreMouseEvents'] ?? false;
+        if (isIgnoreMouseEvents) {
+          await windowManager.setIgnoreMouseEvents(
+            isIgnoreMouseEvents,
+            forward: false,
+          );
         }
-        _desktopLyricsController.lrcAlignment.value=cmdData['lrcAlignment'];
-        _desktopLyricsController.useVerticalDisplayMode.value=cmdData['displayMode'];
-        _desktopLyricsController.useStroke.value=cmdData['useStroke'];
-        _desktopLyricsController.strokeColor.value=cmdData['strokeColor'];
+        _desktopLyricsController.lrcAlignment.value = cmdData['lrcAlignment'];
+        _desktopLyricsController.useVerticalDisplayMode.value =
+            cmdData['displayMode'];
+        _desktopLyricsController.useStroke.value = cmdData['useStroke'];
+        _desktopLyricsController.strokeColor.value = cmdData['strokeColor'];
+        await _desktopLyricsController.calcSize(cmdData['windowWidth']??DesktopLyricsController.windowWidthMin, cmdData['windowHeight']??DesktopLyricsController.windowHeightMin);
         return;
     }
   }
@@ -217,7 +260,7 @@ class DesktopLyricsClient {
 
   void close({bool sendCmd_ = true}) async {
     try {
-      if(sendCmd_){
+      if (sendCmd_) {
         sendCmd(cmdType: ClientCmdType.close);
       }
 
