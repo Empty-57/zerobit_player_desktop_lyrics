@@ -133,9 +133,13 @@ class DesktopLyricsClient {
         case _SeverMessageType.position:
           return _positionHandle(data);
         case _SeverMessageType.data:
-          return _dataHandle(data);
+          try{
+            return _dataHandle(data);
+          }catch(_){}
         case _SeverMessageType.nextData:
-          return _nextDataHandle(data);
+          try{
+            return _nextDataHandle(data);
+          }catch(_){}
       }
     } catch (e) {
       debugPrint(e.toString());
