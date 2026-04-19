@@ -47,7 +47,6 @@ class _LrcLyricWidget extends StatelessWidget {
 class _KaraOkLyricWidget extends StatefulWidget {
   final List<WordEntry> text;
   final TextStyle underStyle;
-  final TextStyle overlayStyle;
   final StrutStyle? strutStyle;
   final DesktopLyricsController ctrl;
   final Axis displayMode;
@@ -57,7 +56,6 @@ class _KaraOkLyricWidget extends StatefulWidget {
   const _KaraOkLyricWidget({
     required this.text,
     required this.underStyle,
-    required this.overlayStyle,
     required this.strutStyle,
     required this.ctrl,
     required this.displayMode,
@@ -143,7 +141,8 @@ class LyricsNextRender extends StatelessWidget {
         CrossAxisAlignment lrcAlignment =
             _lrcCrossAlignment[_desktopLyricsController.lrcAlignment.value];
 
-        if (_desktopLyricsController.lrcAlignment.value == 3&&_desktopLyricsController.showDoubleLine.value) {
+        if (_desktopLyricsController.lrcAlignment.value == 3 &&
+            _desktopLyricsController.showDoubleLine.value) {
           if (_lyricsClient.lyricsCounter.value.isEven) {
             lrcAlignment = _lrcCrossAlignment[2];
           } else {
@@ -166,17 +165,18 @@ class LyricsNextRender extends StatelessWidget {
             children: [
               if (lrcType == LyricFormat.lrc)
                 _LrcLyricWidget(
-                  text: currentLine as String,
-                  overlayStyle: overlayStyle,
+                  text: currentLine is String ? currentLine : '',
+                  overlayStyle: underStyle,
                   displayMode: displayMode,
                   useStroke: _desktopLyricsController.useStroke.value,
                   strokeColor: _desktopLyricsController.strokeColor.value,
                 )
               else
                 _KaraOkLyricWidget(
-                  text: currentLine as List<WordEntry>,
+                  text: currentLine is List<WordEntry>
+                      ? currentLine
+                      : [WordEntry(start: 0.0, duration: 0.0, lyricWord: '')],
                   underStyle: underStyle,
-                  overlayStyle: overlayStyle,
                   strutStyle: displayMode == Axis.vertical ? null : strutStyle,
                   ctrl: _desktopLyricsController,
                   displayMode: displayMode,
