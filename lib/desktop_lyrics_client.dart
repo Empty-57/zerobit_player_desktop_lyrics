@@ -61,9 +61,11 @@ class DesktopLyricsClient {
 
   final _heartbeatInterval = const Duration(seconds: 10);
   final _heartbeatTimeout = const Duration(seconds: 5);
+  final _alwaysOnTopTimeInterval = const Duration(seconds: 1);
 
   Timer? _heartbeatTimer;
   Timer? _heartbeatTimeoutTimer;
+  Timer? _alwaysOnTopTimer;
 
   int _reconnectCounter = 0;
 
@@ -94,6 +96,14 @@ class DesktopLyricsClient {
       _messageHandle(message);
     });
     _startHeartbeat();
+    _startAlwaysOnTop();
+  }
+
+  void _startAlwaysOnTop(){
+    _alwaysOnTopTimer?.cancel();
+    _alwaysOnTopTimer=Timer.periodic(_alwaysOnTopTimeInterval, (_)async{
+      await windowManager.setAlwaysOnTop(true);
+    });
   }
 
   void _startHeartbeat() {
@@ -305,6 +315,8 @@ class DesktopLyricsClient {
         sendCmd(cmdType: ClientCmdType.close);
       }
 
+      _alwaysOnTopTimer?.cancel();
+
       if (_listen != null) {
         await _listen!.cancel();
         _listen = null;
@@ -317,6 +329,7 @@ class DesktopLyricsClient {
       await windowManager.close();
     } catch (e) {
       debugPrint(e.toString());
+      _alwaysOnTopTimer?.cancel();
       await windowManager.close();
     }
   }
