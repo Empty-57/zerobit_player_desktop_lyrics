@@ -256,7 +256,7 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
               child = Obx(
                 () => _HighlightedWord(
                   text: word,
-                  progress: widget.ctrl.wordProgress.value / 100.0,
+                  progress: widget.ctrl.wordProgress.value,
                   underStyle: widget.underStyle,
                   overlayStyle: widget.overlayStyle,
                   strutStyle: widget.strutStyle,
