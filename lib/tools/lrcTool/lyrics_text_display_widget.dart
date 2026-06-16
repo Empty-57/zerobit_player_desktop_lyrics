@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-
 /// 抽象出通用的文本展示Widget，避免重复的Flex布局
 class TextDisplayWidget extends StatelessWidget {
   final String text;
@@ -10,7 +9,8 @@ class TextDisplayWidget extends StatelessWidget {
   final bool useStroke;
   final int strokeColor;
 
-  const TextDisplayWidget({super.key,
+  const TextDisplayWidget({
+    super.key,
     required this.text,
     required this.style,
     this.strutStyle,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:zerobit_player_desktop_lyrics/tools/lrcTool/lyrics_text_display_widget.dart';
+
 import '../tools/general_style.dart';
 import '../tools/lrcTool/lyric_model.dart';
 import 'desktop_lyrics_client.dart';
@@ -105,9 +106,18 @@ class _ScaledTranslateGradientTransform extends GradientTransform {
   });
   @override
   Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
-    return Matrix4.identity()
-      ..scale(scale, 1.0, 1.0)
-      ..translate(dx, 0.0, 0.0);
+    final matrix = Matrix4.zero();
+    final storage = matrix.storage;
+
+    // xyz缩放
+    storage[0] = scale; // x
+    storage[5] = 1.0; // y
+    storage[10] = 1.0; // z
+    storage[15] = 1.0; // w
+
+    // x平移
+    storage[12] = scale * dx;
+    return matrix;
   }
 }
 
@@ -120,9 +130,18 @@ class _ScaledVerticalTranslateGradientTransform extends GradientTransform {
   });
   @override
   Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
-    return Matrix4.identity()
-      ..scale(1.0, scale, 1.0)
-      ..translate(0.0, dy, 0.0);
+    final matrix = Matrix4.zero();
+    final storage = matrix.storage;
+
+    // xyz缩放
+    storage[0] = 1.0; // x
+    storage[5] = scale; // y
+    storage[10] = 1.0; // z
+    storage[15] = 1.0; // w
+
+    // y平移
+    storage[13] = scale * dy;
+    return matrix;
   }
 }
 
@@ -253,20 +272,23 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
 
             Widget child;
             if (isCurrent) {
-              child = Obx(
-                () => _HighlightedWord(
-                  text: word,
-                  progress: widget.ctrl.wordProgress.value,
-                  underStyle: widget.underStyle,
-                  overlayStyle: widget.overlayStyle,
-                  strutStyle: widget.strutStyle,
-                  scale: scale,
-                  begin: widget.begin,
-                  end: widget.end,
-                  displayMode: widget.displayMode,
-                  useStroke: widget.ctrl.useStroke.value,
-                  strokeColor: widget.ctrl.strokeColor.value,
-                ),
+              child = ValueListenableBuilder(
+                valueListenable: widget.ctrl.wordProgress,
+                builder: (_, p, _) {
+                  return _HighlightedWord(
+                    text: word,
+                    progress: p,
+                    underStyle: widget.underStyle,
+                    overlayStyle: widget.overlayStyle,
+                    strutStyle: widget.strutStyle,
+                    scale: scale,
+                    begin: widget.begin,
+                    end: widget.end,
+                    displayMode: widget.displayMode,
+                    useStroke: widget.ctrl.useStroke.value,
+                    strokeColor: widget.ctrl.strokeColor.value,
+                  );
+                },
               );
             } else if (wordIndex < currWordIndex) {
               child = TextDisplayWidget(
@@ -454,7 +476,8 @@ class LyricsRender extends StatelessWidget {
         CrossAxisAlignment lrcAlignment =
             _lrcCrossAlignment[_desktopLyricsController.lrcAlignment.value];
 
-        if (_desktopLyricsController.lrcAlignment.value == 3&&_desktopLyricsController.showDoubleLine.value) {
+        if (_desktopLyricsController.lrcAlignment.value == 3 &&
+            _desktopLyricsController.showDoubleLine.value) {
           if (_lyricsClient.lyricsCounter.value.isEven) {
             lrcAlignment = _lrcCrossAlignment[0];
           } else {

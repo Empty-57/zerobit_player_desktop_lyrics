@@ -2,6 +2,7 @@ abstract class TimedEntry {
   double get start;
   double get nextTime;
 }
+
 /// 行时间轴
 class LyricEntry<T> implements TimedEntry {
   @override
@@ -31,35 +32,45 @@ class WordEntry implements TimedEntry {
     required this.start,
     required this.duration,
     required this.lyricWord,
-    this.nextTime = double.infinity
+    this.nextTime = double.infinity,
   });
 }
 
-class ParsedLyricModel{
+class ParsedLyricModel {
   final List<LyricEntry<dynamic>>? parsedLrc;
   final String type;
-  const ParsedLyricModel({required this.parsedLrc,required this.type});
+  const ParsedLyricModel({required this.parsedLrc, required this.type});
 }
 
-class Get4NetLrcModel{
+class Get4NetLrcModel {
   final String? lrc;
   final String? verbatimLrc;
   final String? translate;
   final String type;
-  const Get4NetLrcModel({required this.lrc,required this.verbatimLrc,required this.translate,required this.type});
+  const Get4NetLrcModel({
+    required this.lrc,
+    required this.verbatimLrc,
+    required this.translate,
+    required this.type,
+  });
 }
 
-class SearchLrcModel{
+class SearchLrcModel {
   final String title;
   final String artist;
   final int id;
   final Get4NetLrcModel? lyric;
 
-  const SearchLrcModel({required this.title,required this.artist,required this.id,required this.lyric});
+  const SearchLrcModel({
+    required this.title,
+    required this.artist,
+    required this.id,
+    required this.lyric,
+  });
 }
 
-abstract class LyricFormat{
-  static const qrc='.qrc';
-  static const yrc='.yrc';
-  static const lrc='.lrc';
+abstract class LyricFormat {
+  static const qrc = '.qrc';
+  static const yrc = '.yrc';
+  static const lrc = '.lrc';
 }

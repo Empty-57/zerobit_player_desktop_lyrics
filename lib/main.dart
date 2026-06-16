@@ -2,9 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_single_instance/flutter_single_instance.dart';
-import 'package:window_manager/window_manager.dart';
 import 'package:get/get.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:zerobit_player_desktop_lyrics/tool_bar.dart';
+
 import 'desktop_lyrics_client.dart';
 import 'desktop_lyrics_next_widget.dart';
 import 'desktop_lyrics_widget.dart';

@@ -1,6 +1,6 @@
 import 'dart:math';
-import 'dart:ui';
 
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:zerobit_player_desktop_lyrics/tools/lrcTool/lyric_model.dart';
@@ -22,7 +22,7 @@ class DesktopLyricsController extends GetxController with WindowListener {
   final isLock = false.obs;
 
   final currentWordIndex = 0.obs;
-  final wordProgress = 0.0.obs;
+  final ValueNotifier<double> wordProgress = ValueNotifier<double>(0.0);
   final lrcType = LyricFormat.lrc.obs;
   final currentLine = Rx<dynamic>('ZeroBit Player');
   final currentTranslate = ''.obs;
@@ -37,7 +37,7 @@ class DesktopLyricsController extends GetxController with WindowListener {
 
   final strokeColor = 0xff000000.obs;
 
-  final showDoubleLine=false.obs;
+  final showDoubleLine = false.obs;
 
   static const double widthIncrement = 12;
   static const double heightIncrement = 2.5;
@@ -60,7 +60,8 @@ class DesktopLyricsController extends GetxController with WindowListener {
     if (w != null && h != null) {
       double hh = h;
       double ww = w;
-      if (useVerticalDisplayMode.value) { //判断窄边
+      if (useVerticalDisplayMode.value) {
+        //判断窄边
         w = min(hh, ww);
         h = max(hh, ww);
       } else {
@@ -111,6 +112,7 @@ class DesktopLyricsController extends GetxController with WindowListener {
   @override
   void onClose() {
     windowManager.removeListener(this);
+    wordProgress.dispose();
     super.onClose();
   }
 

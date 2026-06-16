@@ -3,7 +3,8 @@ import 'package:get/get.dart';
 
 import '../getx_ctrl/desktop_lyrics_ctrl.dart';
 
-final DesktopLyricsController _desktopLyricsController=Get.find<DesktopLyricsController>();
+final DesktopLyricsController _desktopLyricsController =
+    Get.find<DesktopLyricsController>();
 
 TextStyle generalTextStyle<T>({
   required BuildContext ctx,
@@ -16,27 +17,37 @@ TextStyle generalTextStyle<T>({
 }) {
   double fontSize = 15.0;
 
-  const Map<String, double> sizeMap = {'sm': 13.0, 'md': 15.0, 'lg': 17.0,'xl':19.0,'2xl':21.0,'subtitle':24.27,'title':30.742};
+  const Map<String, double> sizeMap = {
+    'sm': 13.0,
+    'md': 15.0,
+    'lg': 17.0,
+    'xl': 19.0,
+    '2xl': 21.0,
+    'subtitle': 24.27,
+    'title': 30.742,
+  };
 
   if (size is String) {
     fontSize = sizeMap[size] ?? sizeMap['md']!;
   }
 
-  if (size is double||size is int) {
+  if (size is double || size is int) {
     fontSize = double.parse(size.toString());
   }
 
   return TextStyle(
-    color: color ?? Theme.of(ctx).colorScheme.onSurface.withValues(alpha: opacity??1.0),
+    color:
+        color ??
+        Theme.of(ctx).colorScheme.onSurface.withValues(alpha: opacity ?? 1.0),
     fontSize: fontSize,
     fontWeight: weight ?? FontWeight.w400,
     decoration: decoration ?? TextDecoration.none,
-    fontFamily: fontFamily??_desktopLyricsController.fontFamily.value,
-    height: 1.0
+    fontFamily: fontFamily ?? _desktopLyricsController.fontFamily.value,
+    height: 1.0,
   );
 }
 
-double getIconSize<T>({T? size}){
+double getIconSize<T>({T? size}) {
   double iconSize = 20.0;
 
   const Map<String, double> sizeMap = {'sm': 18.0, 'md': 20.0, 'lg': 22.0};

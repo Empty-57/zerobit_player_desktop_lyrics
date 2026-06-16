@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:zerobit_player_desktop_lyrics/tools/lrcTool/lyrics_text_display_widget.dart';
+
 import '../tools/general_style.dart';
 import '../tools/lrcTool/lyric_model.dart';
 import 'desktop_lyrics_client.dart';
@@ -121,13 +122,6 @@ class LyricsNextRender extends StatelessWidget {
         ctx: context,
         size: fontSize,
         color: Color(_desktopLyricsController.underColor.value),
-        weight: FontWeight.values[fontWeight],
-      );
-
-      final overlayStyle = generalTextStyle(
-        ctx: context,
-        size: fontSize,
-        color: Color(_desktopLyricsController.overlayColor.value),
         weight: FontWeight.values[fontWeight],
       );
 

@@ -36,7 +36,7 @@ abstract class _SeverCmdType {
   static const setStrokeEnable = 'setStrokeEnable';
   static const setStrokeColor = 'setStrokeColor';
   static const heartBeat = 'heartBeat';
-  static const showDoubleLine='showDoubleLine';
+  static const showDoubleLine = 'showDoubleLine';
 }
 
 abstract class ClientCmdType {
@@ -99,9 +99,9 @@ class DesktopLyricsClient {
     _startAlwaysOnTop();
   }
 
-  void _startAlwaysOnTop(){
+  void _startAlwaysOnTop() {
     _alwaysOnTopTimer?.cancel();
-    _alwaysOnTopTimer=Timer.periodic(_alwaysOnTopTimeInterval, (_)async{
+    _alwaysOnTopTimer = Timer.periodic(_alwaysOnTopTimeInterval, (_) async {
       await windowManager.setAlwaysOnTop(true);
     });
   }
@@ -143,13 +143,13 @@ class DesktopLyricsClient {
         case _SeverMessageType.position:
           return _positionHandle(data);
         case _SeverMessageType.data:
-          try{
+          try {
             return _dataHandle(data);
-          }catch(_){}
+          } catch (_) {}
         case _SeverMessageType.nextData:
-          try{
+          try {
             return _nextDataHandle(data);
-          }catch(_){}
+          } catch (_) {}
       }
     } catch (e) {
       debugPrint(e.toString());
@@ -200,7 +200,7 @@ class DesktopLyricsClient {
         _desktopLyricsController.strokeColor.value = cmdData;
         return;
       case _SeverCmdType.showDoubleLine:
-        _desktopLyricsController.showDoubleLine.value=cmdData;
+        _desktopLyricsController.showDoubleLine.value = cmdData;
         return;
       case _SeverCmdType.heartBeat:
         return _heartbeatTimeoutTimer?.cancel();
@@ -232,7 +232,8 @@ class DesktopLyricsClient {
           cmdData['windowWidth'] ?? DesktopLyricsController.windowWidthMin,
           cmdData['windowHeight'] ?? DesktopLyricsController.windowHeightMin,
         );
-        _desktopLyricsController.showDoubleLine.value=cmdData['showDoubleLine'];
+        _desktopLyricsController.showDoubleLine.value =
+            cmdData['showDoubleLine'];
         return;
     }
   }

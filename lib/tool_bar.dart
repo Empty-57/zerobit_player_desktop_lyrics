@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import 'package:zerobit_player_desktop_lyrics/tools/func_extension.dart';
-
 import 'package:zerobit_player_desktop_lyrics/tools/general_style.dart';
 
 import 'desktop_lyrics_client.dart';
