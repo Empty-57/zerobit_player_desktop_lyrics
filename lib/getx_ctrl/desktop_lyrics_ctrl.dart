@@ -39,7 +39,7 @@ class DesktopLyricsController extends GetxController with WindowListener {
 
   final showDoubleLine = false.obs;
 
-  final lyricsSwitchAnimateMode = 0.obs;
+  final lyricsSwitchAnimateMode = 1.obs; // 0 无动画 1 淡入淡出 2滑动 3 缩放
 
   static const double widthIncrement = 12;
   static const double heightIncrement = 2.5;

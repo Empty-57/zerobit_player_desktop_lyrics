@@ -88,56 +88,179 @@ class MyApp extends StatelessWidget {
             child: Stack(
               children: [
                 Obx(() {
-                  Widget currLyrics = Expanded(
-                    child: lyricsClient.lyricsCounter.value.isEven
-                        ? const LyricsRender()
-                        : const LyricsNextRender(),
-                  );
-                  Widget nextLyrics;
+                  final counter = lyricsClient.lyricsCounter.value;
+                  final isEven = counter.isEven;
+                  final lrcAlignment =
+                      desktopLyricsController.lrcAlignment.value;
+                  final useVertical =
+                      desktopLyricsController.useVerticalDisplayMode.value;
+                  final showDoubleLine =
+                      desktopLyricsController.showDoubleLine.value;
+                  final isIgnoreMouse =
+                      desktopLyricsController.isIgnoreMouseEvents.value;
+                  final animateMode =
+                      desktopLyricsController.lyricsSwitchAnimateMode.value;
 
-                  if (desktopLyricsController.lrcAlignment.value == 3) {
-                    nextLyrics = Expanded(
-                      child: Align(
-                        alignment:
-                            desktopLyricsController.useVerticalDisplayMode.value
+                  // 槽位1 在 counter 为 1, 3, 5 时触发动画
+                  final currSlotVersion = (counter + 1) ~/ 2;
+                  // 槽位2 在 counter 为 0, 2, 4 时触发动画
+                  final nextSlotVersion = counter ~/ 2;
+
+                  Alignment getStackAlignment(bool isNextSlot) {
+                    if (lrcAlignment == 3) {
+                      if (isNextSlot) {
+                        return useVertical
                             ? Alignment.bottomCenter
-                            : Alignment.centerRight,
-                        child: lyricsClient.lyricsCounter.value.isEven
-                            ? const LyricsNextRender()
-                            : const LyricsRender(),
-                      ),
-                    );
-                  } else {
-                    nextLyrics = Expanded(
-                      child: lyricsClient.lyricsCounter.value.isEven
-                          ? const LyricsNextRender()
-                          : const LyricsRender(),
+                            : Alignment.centerRight;
+                      }
+                      return useVertical
+                          ? Alignment.topCenter
+                          : Alignment.centerLeft;
+                    }
+                    if (useVertical) {
+                      if (lrcAlignment == 0) return Alignment.topCenter;
+                      if (lrcAlignment == 2) return Alignment.bottomCenter;
+                      return Alignment.center;
+                    } else {
+                      if (lrcAlignment == 0) return Alignment.centerLeft;
+                      if (lrcAlignment == 2) return Alignment.centerRight;
+                      return Alignment.center;
+                    }
+                  }
+
+                  Widget getAnimatedChild(
+                    Animation<double> animation,
+                    Widget child,
+                  ) {
+                    if (animateMode == 2) {
+                      return SlideTransition(
+                        position: Tween<Offset>(
+                          begin: useVertical
+                              ? const Offset(0.1, 0)
+                              : const Offset(0, -0.1),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      );
+                    }
+                    if (animateMode == 3) {
+                      return ScaleTransition(
+                        scale: Tween<double>(
+                          begin: 0.8,
+                          end: 1.0,
+                        ).animate(animation),
+                        child: child,
+                      );
+                    }
+                    return child;
+                  }
+
+                  Widget buildAnimatedLyric(
+                    Widget child,
+                    Key animationKey,
+                    bool isNextSlot,
+                  ) {
+                    if (animateMode == 0) {
+                      return child;
+                    }
+
+                    return AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 500),
+                      switchInCurve: Curves.easeOutCubic,
+                      layoutBuilder:
+                          (
+                            Widget? currentChild,
+                            List<Widget> previousChildren,
+                          ) {
+                            return Stack(
+                              alignment: getStackAlignment(isNextSlot),
+                              children: <Widget>[
+                                // 抛弃 previousChildren，避免旧文本瞬间的字形闪烁
+                                if (currentChild != null) currentChild,
+                              ],
+                            );
+                          },
+                      transitionBuilder:
+                          (Widget child, Animation<double> animation) {
+                            return FadeTransition(
+                              opacity: Tween<double>(
+                                begin: 0.4,
+                                end: 1.0,
+                              ).animate(animation),
+                              child: getAnimatedChild(animation, child),
+                            );
+                          },
+                      // 用key触发动画
+                      child: KeyedSubtree(key: animationKey, child: child),
                     );
                   }
 
-                  if (!desktopLyricsController.showDoubleLine.value) {
-                    nextLyrics = SizedBox.shrink();
-                    currLyrics = Expanded(child: const LyricsRender());
+                  Widget currLyrics;
+                  Widget nextLyrics;
+
+                  if (!showDoubleLine) {
+                    currLyrics = Expanded(
+                      child: buildAnimatedLyric(
+                        const LyricsRender(),
+                        ValueKey('single_$counter'),
+                        false,
+                      ),
+                    );
+                    nextLyrics = const SizedBox.shrink();
+                  } else {
+                    currLyrics = Expanded(
+                      child: buildAnimatedLyric(
+                        isEven
+                            ? const LyricsRender()
+                            : const LyricsNextRender(),
+                        // 只有奇数次才触发动画
+                        ValueKey('curr_$currSlotVersion'),
+                        false,
+                      ),
+                    );
+
+                    Widget nextContent = isEven
+                        ? const LyricsNextRender()
+                        : const LyricsRender();
+
+                    if (lrcAlignment == 3) {
+                      nextLyrics = Expanded(
+                        child: Align(
+                          alignment: useVertical
+                              ? Alignment.bottomCenter
+                              : Alignment.centerRight,
+                          child: buildAnimatedLyric(
+                            nextContent,
+                            // 只有偶数次才触发动画
+                            ValueKey('next_$nextSlotVersion'),
+                            true,
+                          ),
+                        ),
+                      );
+                    } else {
+                      nextLyrics = Expanded(
+                        child: buildAnimatedLyric(
+                          nextContent,
+                          ValueKey('next_$nextSlotVersion'),
+                          true,
+                        ),
+                      );
+                    }
                   }
 
                   return Container(
                     width: constraints.maxWidth,
                     height: constraints.maxHeight,
-                    color:
-                        _isHover.value &&
-                            !desktopLyricsController.isIgnoreMouseEvents.value
+                    color: _isHover.value && !isIgnoreMouse
                         ? Colors.black.withValues(alpha: 0.4)
                         : Colors.transparent,
                     child: Flex(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment:
-                          _lrcCrossAlignment[desktopLyricsController
-                              .lrcAlignment
-                              .value],
-                      direction:
-                          desktopLyricsController.useVerticalDisplayMode.value
-                          ? Axis.horizontal
-                          : Axis.vertical,
+                          _lrcCrossAlignment[lrcAlignment == 3
+                              ? 0
+                              : lrcAlignment],
+                      direction: useVertical ? Axis.horizontal : Axis.vertical,
                       children: [
                         ToolBar(isHover: _isHover),
                         currLyrics,

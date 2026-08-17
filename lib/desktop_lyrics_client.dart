@@ -37,6 +37,7 @@ abstract class _SeverCmdType {
   static const setStrokeColor = 'setStrokeColor';
   static const heartBeat = 'heartBeat';
   static const showDoubleLine = 'showDoubleLine';
+  static const lyricsSwitchAnimateMode = 'lyricsSwitchAnimateMode';
 }
 
 abstract class ClientCmdType {
@@ -203,6 +204,9 @@ class DesktopLyricsClient {
       case _SeverCmdType.showDoubleLine:
         _desktopLyricsController.showDoubleLine.value = cmdData;
         return;
+      case _SeverCmdType.lyricsSwitchAnimateMode:
+        _desktopLyricsController.lyricsSwitchAnimateMode.value = cmdData;
+        return;
       case _SeverCmdType.heartBeat:
         return _heartbeatTimeoutTimer?.cancel();
       case _SeverCmdType.putConfig:
@@ -232,6 +236,8 @@ class DesktopLyricsClient {
         );
         _desktopLyricsController.showDoubleLine.value =
             cmdData['showDoubleLine'];
+        _desktopLyricsController.lyricsSwitchAnimateMode.value =
+            cmdData['lyricsSwitchAnimateMode'];
         return;
     }
   }
