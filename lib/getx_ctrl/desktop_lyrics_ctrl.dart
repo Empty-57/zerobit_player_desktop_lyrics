@@ -19,7 +19,7 @@ class DesktopLyricsController extends GetxController with WindowListener {
   final underColor = 0xff0000ff.obs;
   final fontOpacity = 1.0.obs;
 
-  final isLock = false.obs;
+  final isIgnoreMouseEvents = false.obs;
 
   final currentWordIndex = 0.obs;
   final ValueNotifier<double> wordProgress = ValueNotifier<double>(0.0);
@@ -38,6 +38,8 @@ class DesktopLyricsController extends GetxController with WindowListener {
   final strokeColor = 0xff000000.obs;
 
   final showDoubleLine = false.obs;
+
+  final lyricsSwitchAnimateMode = 0.obs;
 
   static const double widthIncrement = 12;
   static const double heightIncrement = 2.5;

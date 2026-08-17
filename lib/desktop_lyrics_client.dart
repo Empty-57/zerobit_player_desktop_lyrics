@@ -185,6 +185,7 @@ class DesktopLyricsClient {
         _desktopLyricsController.fontOpacity.value = cmdData.clamp(0.0, 1.0);
         return;
       case _SeverCmdType.setIgnoreMouseEvents:
+        _desktopLyricsController.isIgnoreMouseEvents.value = cmdData;
         await windowManager.setIgnoreMouseEvents(cmdData);
         return;
       case _SeverCmdType.setLrcAlignment:
@@ -211,18 +212,15 @@ class DesktopLyricsClient {
         _desktopLyricsController.overlayColor.value = cmdData['overlayColor'];
         _desktopLyricsController.underColor.value = cmdData['underColor'];
         _desktopLyricsController.fontOpacity.value = cmdData['fontOpacity'];
-        _desktopLyricsController.isLock.value = cmdData['isLock'];
         await windowManager.setPosition(
           Offset(cmdData['dx'] ?? 50.0, cmdData['dy'] ?? 50.0),
         );
-        final bool isIgnoreMouseEvents =
+        _desktopLyricsController.isIgnoreMouseEvents.value =
             cmdData['isIgnoreMouseEvents'] ?? false;
-        if (isIgnoreMouseEvents) {
-          await windowManager.setIgnoreMouseEvents(
-            isIgnoreMouseEvents,
-            forward: false,
-          );
-        }
+        await windowManager.setIgnoreMouseEvents(
+          _desktopLyricsController.isIgnoreMouseEvents.value,
+          forward: false,
+        );
         _desktopLyricsController.lrcAlignment.value = cmdData['lrcAlignment'];
         _desktopLyricsController.useVerticalDisplayMode.value =
             cmdData['displayMode'];

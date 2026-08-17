@@ -78,7 +78,8 @@ class MyApp extends StatelessWidget {
       home: LayoutBuilder(
         builder: (_, constraints) => GestureDetector(
           behavior: HitTestBehavior.translucent,
-          onPanStart: (details) => desktopLyricsController.isLock.value
+          onPanStart: (details) =>
+              desktopLyricsController.isIgnoreMouseEvents.value
               ? null
               : windowManager.startDragging(),
           child: MouseRegion(
@@ -123,7 +124,8 @@ class MyApp extends StatelessWidget {
                     width: constraints.maxWidth,
                     height: constraints.maxHeight,
                     color:
-                        _isHover.value && !desktopLyricsController.isLock.value
+                        _isHover.value &&
+                            !desktopLyricsController.isIgnoreMouseEvents.value
                         ? Colors.black.withValues(alpha: 0.4)
                         : Colors.transparent,
                     child: Flex(

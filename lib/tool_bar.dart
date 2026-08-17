@@ -56,106 +56,87 @@ class ToolBar extends StatelessWidget {
           ? DesktopLyricsController.toolBarHeight
           : context.width,
       color: Colors.transparent,
-      child: Flex(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        spacing: 6,
-        direction: _desktopLyricsController.useVerticalDisplayMode.value
-            ? Axis.vertical
-            : Axis.horizontal,
-        children: [
-          Obx(
-            () => Visibility(
-              visible: isHover.value && !_desktopLyricsController.isLock.value,
-              child: Flex(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                direction: _desktopLyricsController.useVerticalDisplayMode.value
-                    ? Axis.vertical
-                    : Axis.horizontal,
-                spacing: 6,
-                children: [
-                  _ControllerButton(
-                    icon: PhosphorIconsLight.plus,
-                    tooltip: '字号+',
-                    fn: () {
-                      _desktopLyricsController.addFontSize();
-                      _lyricsClient.sendCmd(cmdType: ClientCmdType.addFontSize);
-                    },
-                  ),
-                  _ControllerButton(
-                    icon: PhosphorIconsLight.minus,
-                    tooltip: '字号-',
-                    fn: () {
-                      _desktopLyricsController.decFontSize();
-                      _lyricsClient.sendCmd(cmdType: ClientCmdType.decFontSize);
-                    },
-                  ),
-                  _ControllerButton(
-                    icon: PhosphorIconsFill.skipBack,
-                    tooltip: '上一首',
-                    fn: () async {
-                      _lyricsClient.sendCmd(cmdType: ClientCmdType.previous);
-                    }.throttle(ms: 500),
-                  ),
-                  Obx(
-                    () => _ControllerButton(
-                      icon:
-                          _desktopLyricsController.currentState.value ==
-                              AudioState.playing.index
-                          ? PhosphorIconsFill.pause
-                          : PhosphorIconsFill.play,
-                      tooltip:
-                          _desktopLyricsController.currentState.value ==
-                              AudioState.playing.index
-                          ? '暂停'
-                          : '播放',
-                      fn: () async {
-                        _lyricsClient.sendCmd(cmdType: ClientCmdType.toggle);
-                      }.throttle(ms: 300),
-                    ),
-                  ),
-                  _ControllerButton(
-                    icon: PhosphorIconsFill.skipForward,
-                    tooltip: '下一首',
-                    fn: () async {
-                      _lyricsClient.sendCmd(cmdType: ClientCmdType.next);
-                    }.throttle(ms: 500),
-                  ),
-                  _ControllerButton(
-                    icon: PhosphorIconsLight.x,
-                    tooltip: '关闭',
-                    fn: () {
-                      _lyricsClient.close();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Obx(
-            () => Visibility(
-              visible: isHover.value,
-              maintainSize: true,
-              maintainAnimation: true,
-              maintainState: true,
-              child: _ControllerButton(
-                icon: _desktopLyricsController.isLock.value
-                    ? PhosphorIconsFill.lock
-                    : PhosphorIconsFill.lockOpen,
-                tooltip: _desktopLyricsController.isLock.value ? '解锁' : '锁定',
-                fn: () async {
-                  _desktopLyricsController.isLock.value =
-                      !_desktopLyricsController.isLock.value;
-                  _lyricsClient.sendCmd(
-                    cmdType: ClientCmdType.switchLock,
-                    cmdData: _desktopLyricsController.isLock.value,
-                  );
+      child: Obx(
+        () => Visibility(
+          visible:
+              isHover.value &&
+              !_desktopLyricsController.isIgnoreMouseEvents.value,
+          child: Flex(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            direction: _desktopLyricsController.useVerticalDisplayMode.value
+                ? Axis.vertical
+                : Axis.horizontal,
+            spacing: 6,
+            children: [
+              _ControllerButton(
+                icon: PhosphorIconsLight.plus,
+                tooltip: '字号+',
+                fn: () {
+                  _desktopLyricsController.addFontSize();
+                  _lyricsClient.sendCmd(cmdType: ClientCmdType.addFontSize);
                 },
               ),
-            ),
+              _ControllerButton(
+                icon: PhosphorIconsLight.minus,
+                tooltip: '字号-',
+                fn: () {
+                  _desktopLyricsController.decFontSize();
+                  _lyricsClient.sendCmd(cmdType: ClientCmdType.decFontSize);
+                },
+              ),
+              _ControllerButton(
+                icon: PhosphorIconsFill.skipBack,
+                tooltip: '上一首',
+                fn: () async {
+                  _lyricsClient.sendCmd(cmdType: ClientCmdType.previous);
+                }.throttle(ms: 500),
+              ),
+              Obx(() {
+                final state = _desktopLyricsController.currentState.value;
+                return _ControllerButton(
+                  icon: state == AudioState.playing.index
+                      ? PhosphorIconsFill.pause
+                      : PhosphorIconsFill.play,
+                  tooltip: state == AudioState.playing.index ? '暂停' : '播放',
+                  fn: () async {
+                    _lyricsClient.sendCmd(cmdType: ClientCmdType.toggle);
+                  }.throttle(ms: 300),
+                );
+              }),
+              _ControllerButton(
+                icon: PhosphorIconsFill.skipForward,
+                tooltip: '下一首',
+                fn: () async {
+                  _lyricsClient.sendCmd(cmdType: ClientCmdType.next);
+                }.throttle(ms: 500),
+              ),
+              _ControllerButton(
+                icon: PhosphorIconsLight.x,
+                tooltip: '关闭',
+                fn: () {
+                  _lyricsClient.close();
+                },
+              ),
+              Obx(
+                () => _ControllerButton(
+                  icon: _desktopLyricsController.isIgnoreMouseEvents.value
+                      ? PhosphorIconsFill.lock
+                      : PhosphorIconsFill.lockOpen,
+                  tooltip: '锁定',
+                  fn: () async {
+                    _desktopLyricsController.isIgnoreMouseEvents.toggle();
+                    _lyricsClient.sendCmd(
+                      cmdType: ClientCmdType.switchLock,
+                      cmdData:
+                          _desktopLyricsController.isIgnoreMouseEvents.value,
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
