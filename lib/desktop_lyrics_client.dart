@@ -249,47 +249,62 @@ class DesktopLyricsClient {
   }
 
   void _dataHandle(Map<String, dynamic> data) {
-    _desktopLyricsController.lrcType.value = data['lyricsType'];
+    final lrcType = data['lyricsType'];
+    final rawLyrics = data['lyrics'];
+    final translate = data['translate'];
 
-    if (_desktopLyricsController.lrcType.value != '.lrc') {
-      final line = (data['lyrics'] as List<dynamic>).map((v) {
-        return WordEntry(
-          start: v['start'],
-          duration: v['duration'],
-          lyricWord: v['lyricWord'],
-        );
-      }).toList();
-
-      _desktopLyricsController.currentLine.value = line;
-    } else {
-      _desktopLyricsController.currentLine.value = data['lyrics'];
-    }
-
-    _desktopLyricsController.currentTranslate.value = data['translate'];
-
-    lyricsCounter.value++;
-  }
-
-  void _nextDataHandle(Map<String, dynamic> data) {
-    _desktopLyricsController.lrcType.value = data['lyricsType'];
-
-    if (_desktopLyricsController.lrcType.value != '.lrc') {
-      final line = (data['lyrics'] as List<dynamic>).map((v) {
+    dynamic parsedLine;
+    if (lrcType != '.lrc' && rawLyrics is List) {
+      parsedLine = rawLyrics.map((v) {
         if (v == null) {
           return WordEntry(start: 0.0, duration: 0.0, lyricWord: '');
         }
         return WordEntry(
-          start: v['start'],
-          duration: v['duration'],
-          lyricWord: v['lyricWord'],
+          start: (v['start'] as num?)?.toDouble() ?? 0.0,
+          duration: (v['duration'] as num?)?.toDouble() ?? 0.0,
+          lyricWord: v['lyricWord']?.toString() ?? '',
         );
       }).toList();
-
-      _desktopLyricsController.nextLine.value = line;
     } else {
-      _desktopLyricsController.nextLine.value = data['lyrics'];
+      parsedLine = rawLyrics;
     }
-    _desktopLyricsController.nextTranslate.value = data['translate'];
+
+    batch(() {
+      _desktopLyricsController.currentWordIndex.value = -1;
+      _desktopLyricsController.lrcType.value = lrcType;
+      _desktopLyricsController.currentLine.value = parsedLine;
+      _desktopLyricsController.currentTranslate.value = translate;
+      lyricsCounter.value++;
+    });
+  }
+
+  void _nextDataHandle(Map<String, dynamic> data) {
+    final lrcType = data['lyricsType'];
+    final rawLyrics = data['lyrics'];
+    final translate = data['translate'];
+
+    dynamic parsedLine;
+    if (lrcType != '.lrc' && rawLyrics is List) {
+      parsedLine = rawLyrics.map((v) {
+        if (v == null) {
+          return WordEntry(start: 0.0, duration: 0.0, lyricWord: '');
+        }
+        return WordEntry(
+          start: (v['start'] as num?)?.toDouble() ?? 0.0,
+          duration: (v['duration'] as num?)?.toDouble() ?? 0.0,
+          lyricWord: v['lyricWord']?.toString() ?? '',
+        );
+      }).toList();
+    } else {
+      parsedLine = rawLyrics;
+    }
+
+    batch(() {
+      _desktopLyricsController.currentWordIndex.value = -1;
+      _desktopLyricsController.lrcType.value = lrcType;
+      _desktopLyricsController.nextLine.value = parsedLine;
+      _desktopLyricsController.nextTranslate.value = translate;
+    });
   }
 
   void _add(dynamic msg) {

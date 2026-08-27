@@ -26,7 +26,7 @@ class DesktopLyricsController with WindowListener {
 
   final isIgnoreMouseEvents = signal(false);
 
-  final currentWordIndex = signal(0);
+  final currentWordIndex = signal(-1);
 
   final wordProgress = signal(0.0); // ValueNotifier
 
