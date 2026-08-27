@@ -94,6 +94,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_hooks:
+    dependency: transitive
+    description:
+      name: flutter_hooks
+      sha256: "8ae1f090e5f4ef5cfa6670ce1ab5dddadd33f3533a7f9ba19d9f958aa2a89f42"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "0.21.3+1"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -123,14 +131,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "3.1.0"
-  get:
+  get_it:
     dependency: "direct main"
     description:
-      name: get
-      sha256: "5ed34a7925b85336e15d472cc4cfe7d9ebf4ab8e8b9f688585bf6b50f4c3d79a"
+      name: get_it
+      sha256: "568d62f0e68666fb5d95519743b3c24a34c7f19d834b0658c46e26d778461f66"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "4.7.3"
+    version: "9.2.1"
   google_cloud:
     dependency: transitive
     description:
@@ -379,6 +387,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.1.8"
+  preact_signals:
+    dependency: transitive
+    description:
+      name: preact_signals
+      sha256: "18f45e7f91a4dfad8bd0138efa6b85770bb25e13278b863fdaafd28a56579b16"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "7.0.0"
   protobuf:
     dependency: transitive
     description:
@@ -443,6 +459,38 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "0.2.1"
+  signals:
+    dependency: "direct main"
+    description:
+      name: signals
+      sha256: "3b6be91d04808b542612a525eaeb1875e50be153671e618a42f74e0607088ecd"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "7.1.0"
+  signals_core:
+    dependency: transitive
+    description:
+      name: signals_core
+      sha256: "04d7ccb0265264191a4e2666050031129f47c2bbf4ac3f31f6586889a9903b62"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "7.0.0"
+  signals_flutter:
+    dependency: transitive
+    description:
+      name: signals_flutter
+      sha256: f0285fd2f98d720724df879c258dc41725f260f8e5b1184655ef64ba679197ad
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "7.1.0"
+  signals_hooks:
+    dependency: transitive
+    description:
+      name: signals_hooks
+      sha256: af6c2c4be47f06214292fedab6f6e943433c02086c956eeaffe45c4a23a57413
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "7.1.0"
   sky_engine:
     dependency: transitive
     description: flutter

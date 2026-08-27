@@ -2,16 +2,17 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
-import 'package:get/get.dart';
+import 'package:get_it/get_it.dart';
+import 'package:signals/signals_core.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:window_manager/window_manager.dart';
 import 'package:zerobit_player_desktop_lyrics/tools/lrcTool/lyric_model.dart';
 
-import 'getx_ctrl/desktop_lyrics_ctrl.dart';
+import 'controller/desktop_lyrics_ctrl.dart';
 
 final DesktopLyricsController _desktopLyricsController =
-    Get.find<DesktopLyricsController>();
+    GetIt.I<DesktopLyricsController>();
 
 abstract class _SeverMessageType {
   static const data = 'data';
@@ -70,7 +71,7 @@ class DesktopLyricsClient {
 
   int _reconnectCounter = 0;
 
-  final lyricsCounter = 0.obs;
+  final lyricsCounter = signal(0);
 
   void connect() async {
     _channel = IOWebSocketChannel.connect(_wsUrl);

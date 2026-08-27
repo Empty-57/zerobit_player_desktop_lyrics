@@ -30,7 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  get: ^4.7.2
+  signals: ^7.1.0
+  get_it: ^9.2.1
   window_manager: ^0.5.0
   web_socket_channel: ^3.0.3
   phosphoricons_flutter: ^1.0.0

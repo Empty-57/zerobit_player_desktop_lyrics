@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:get_it/get_it.dart';
+import 'package:signals/signals_flutter.dart';
 import 'package:zerobit_player_desktop_lyrics/tools/lrcTool/lyrics_text_display_widget.dart';
 
 import '../tools/general_style.dart';
 import '../tools/lrcTool/lyric_model.dart';
 import 'desktop_lyrics_client.dart';
-import 'getx_ctrl/desktop_lyrics_ctrl.dart';
+import 'controller/desktop_lyrics_ctrl.dart';
 
 final DesktopLyricsController _desktopLyricsController =
-    Get.find<DesktopLyricsController>();
-final DesktopLyricsClient _lyricsClient = Get.find<DesktopLyricsClient>();
+    GetIt.I<DesktopLyricsController>();
+final DesktopLyricsClient _lyricsClient = GetIt.I<DesktopLyricsClient>();
+
 const _lrcCrossAlignment = [
   CrossAxisAlignment.start,
   CrossAxisAlignment.center,
@@ -250,73 +252,75 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
       controller: _scrollController,
       scrollDirection: widget.displayMode,
       clipBehavior: Clip.none,
-      child: Obx(() {
-        final currWordIndex = widget.ctrl.currentWordIndex.value;
-        // 确保布局已完成
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToIndex(currWordIndex);
-        });
+      child: SignalBuilder(
+        builder: (context) {
+          final currWordIndex = widget.ctrl.currentWordIndex.value;
+          // 确保布局已完成
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToIndex(currWordIndex);
+          });
 
-        // 构造每个字的 Widget
-        return Flex(
-          direction: widget.displayMode,
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: widget.text.asMap().entries.map((entry) {
-            final wordIndex = entry.key;
-            final wordEntry = entry.value;
-            final word = wordEntry.lyricWord;
-            final double scale = wordEntry.duration >= 1.0 ? 3 : 2;
-            final isCurrent = wordIndex == currWordIndex;
+          // 构造每个字的 Widget
+          return Flex(
+            direction: widget.displayMode,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: widget.text.asMap().entries.map((entry) {
+              final wordIndex = entry.key;
+              final wordEntry = entry.value;
+              final word = wordEntry.lyricWord;
+              final double scale = wordEntry.duration >= 1.0 ? 3 : 2;
+              final isCurrent = wordIndex == currWordIndex;
 
-            Widget child;
-            if (isCurrent) {
-              child = ValueListenableBuilder(
-                valueListenable: widget.ctrl.wordProgress,
-                builder: (_, p, _) {
-                  return _HighlightedWord(
-                    text: word,
-                    progress: p,
-                    underStyle: widget.underStyle,
-                    overlayStyle: widget.overlayStyle,
-                    strutStyle: widget.strutStyle,
-                    scale: scale,
-                    begin: widget.begin,
-                    end: widget.end,
-                    displayMode: widget.displayMode,
-                    useStroke: widget.ctrl.useStroke.value,
-                    strokeColor: widget.ctrl.strokeColor.value,
-                  );
-                },
-              );
-            } else if (wordIndex < currWordIndex) {
-              child = TextDisplayWidget(
-                text: word,
-                style: widget.overlayStyle.copyWith(
-                  color: widget.overlayStyle.color,
-                ),
-                strutStyle: widget.strutStyle,
-                displayMode: widget.displayMode,
-                useStroke: widget.ctrl.useStroke.value,
-                strokeColor: widget.ctrl.strokeColor.value,
-              );
-            } else {
-              child = TextDisplayWidget(
-                text: word,
-                style: widget.underStyle,
-                strutStyle: widget.strutStyle,
-                displayMode: widget.displayMode,
-                useStroke: widget.ctrl.useStroke.value,
-                strokeColor: widget.ctrl.strokeColor.value,
-              );
-            }
+              Widget child;
+              if (isCurrent) {
+                child = SignalBuilder(
+                  builder: (context) {
+                    final p = widget.ctrl.wordProgress.value;
+                    return _HighlightedWord(
+                      text: word,
+                      progress: p,
+                      underStyle: widget.underStyle,
+                      overlayStyle: widget.overlayStyle,
+                      strutStyle: widget.strutStyle,
+                      scale: scale,
+                      begin: widget.begin,
+                      end: widget.end,
+                      displayMode: widget.displayMode,
+                      useStroke: widget.ctrl.useStroke.value,
+                      strokeColor: widget.ctrl.strokeColor.value,
+                    );
+                  },
+                );
+              } else if (wordIndex < currWordIndex) {
+                child = TextDisplayWidget(
+                  text: word,
+                  style: widget.overlayStyle.copyWith(
+                    color: widget.overlayStyle.color,
+                  ),
+                  strutStyle: widget.strutStyle,
+                  displayMode: widget.displayMode,
+                  useStroke: widget.ctrl.useStroke.value,
+                  strokeColor: widget.ctrl.strokeColor.value,
+                );
+              } else {
+                child = TextDisplayWidget(
+                  text: word,
+                  style: widget.underStyle,
+                  strutStyle: widget.strutStyle,
+                  displayMode: widget.displayMode,
+                  useStroke: widget.ctrl.useStroke.value,
+                  strokeColor: widget.ctrl.strokeColor.value,
+                );
+              }
 
-            // 用 RepaintBoundary 降低局部重绘开销
-            return RepaintBoundary(key: _wordKeys[wordIndex], child: child);
-          }).toList(),
-        );
-      }),
+              // 用 RepaintBoundary 降低局部重绘开销
+              return RepaintBoundary(key: _wordKeys[wordIndex], child: child);
+            }).toList(),
+          );
+        },
+      ),
     );
   }
 }
@@ -392,36 +396,38 @@ class _TranslateWidgetState extends State<_TranslateWidget> {
       controller: _scrollController,
       scrollDirection: widget.displayMode,
       clipBehavior: Clip.none,
-      child: Obx(() {
-        final currWordIndex = widget.ctrl.currentWordIndex.value;
-        // 确保布局已完成
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToIndex(currWordIndex);
-        });
+      child: SignalBuilder(
+        builder: (context) {
+          final currWordIndex = widget.ctrl.currentWordIndex.value;
+          // 确保布局已完成
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToIndex(currWordIndex);
+          });
 
-        // 构造每个字的 Widget
-        return Flex(
-          direction: widget.displayMode,
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: widget.text.asMap().entries.map((entry) {
-            final wordIndex = entry.key;
-            final word = entry.value;
+          // 构造每个字的 Widget
+          return Flex(
+            direction: widget.displayMode,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: widget.text.asMap().entries.map((entry) {
+              final wordIndex = entry.key;
+              final word = entry.value;
 
-            Widget child = TextDisplayWidget(
-              text: word,
-              style: widget.underStyle,
-              strutStyle: widget.strutStyle,
-              displayMode: widget.displayMode,
-              useStroke: widget.ctrl.useStroke.value,
-              strokeColor: widget.ctrl.strokeColor.value,
-            );
+              Widget child = TextDisplayWidget(
+                text: word,
+                style: widget.underStyle,
+                strutStyle: widget.strutStyle,
+                displayMode: widget.displayMode,
+                useStroke: widget.ctrl.useStroke.value,
+                strokeColor: widget.ctrl.strokeColor.value,
+              );
 
-            // 用 RepaintBoundary 降低局部重绘开销
-            return RepaintBoundary(key: _wordKeys[wordIndex], child: child);
-          }).toList(),
-        );
-      }),
+              // 用 RepaintBoundary 降低局部重绘开销
+              return RepaintBoundary(key: _wordKeys[wordIndex], child: child);
+            }).toList(),
+          );
+        },
+      ),
     );
   }
 }
@@ -439,98 +445,106 @@ class LyricsRender extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      final fontSize = _desktopLyricsController.fontSize.value;
-      final fontWeight = _desktopLyricsController.fontWeight.value;
-      final displayMode = _desktopLyricsController.useVerticalDisplayMode.value
-          ? Axis.vertical
-          : Axis.horizontal;
-      final begin = _desktopLyricsController.useVerticalDisplayMode.value
-          ? Alignment.topCenter
-          : Alignment.centerLeft;
-      final end = _desktopLyricsController.useVerticalDisplayMode.value
-          ? Alignment.bottomCenter
-          : Alignment.centerRight;
+    return SignalBuilder(
+      builder: (context) {
+        final fontSize = _desktopLyricsController.fontSize.value;
+        final fontWeight = _desktopLyricsController.fontWeight.value;
+        final displayMode =
+            _desktopLyricsController.useVerticalDisplayMode.value
+            ? Axis.vertical
+            : Axis.horizontal;
+        final begin = _desktopLyricsController.useVerticalDisplayMode.value
+            ? Alignment.topCenter
+            : Alignment.centerLeft;
+        final end = _desktopLyricsController.useVerticalDisplayMode.value
+            ? Alignment.bottomCenter
+            : Alignment.centerRight;
 
-      final underStyle = generalTextStyle(
-        ctx: context,
-        size: fontSize,
-        color: Color(_desktopLyricsController.underColor.value),
-        weight: FontWeight.values[fontWeight],
-      );
-
-      final overlayStyle = generalTextStyle(
-        ctx: context,
-        size: fontSize,
-        color: Color(_desktopLyricsController.overlayColor.value),
-        weight: FontWeight.values[fontWeight],
-      );
-
-      final strutStyle = StrutStyle(
-        fontSize: fontSize.toDouble(),
-        forceStrutHeight: true,
-      );
-      return Obx(() {
-        final lrcType = _desktopLyricsController.lrcType.value;
-        final currentLine = _desktopLyricsController.currentLine.value;
-        CrossAxisAlignment lrcAlignment =
-            _lrcCrossAlignment[_desktopLyricsController.lrcAlignment.value];
-
-        if (_desktopLyricsController.lrcAlignment.value == 3 &&
-            _desktopLyricsController.showDoubleLine.value) {
-          if (_lyricsClient.lyricsCounter.value.isEven) {
-            lrcAlignment = _lrcCrossAlignment[0];
-          } else {
-            lrcAlignment = _lrcCrossAlignment[2];
-          }
-        }
-
-        if (currentLine == null) {
-          return const SizedBox.shrink();
-        }
-        final currentTranslate =
-            _desktopLyricsController.currentTranslate.value;
-
-        return Opacity(
-          opacity: _desktopLyricsController.fontOpacity.value,
-          child: Flex(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: lrcAlignment, // 切换对齐方式
-            direction: _desktopLyricsController.useVerticalDisplayMode.value
-                ? Axis.horizontal
-                : Axis.vertical,
-            children: [
-              if (lrcType == LyricFormat.lrc)
-                _LrcLyricWidget(
-                  text: currentLine as String,
-                  overlayStyle: overlayStyle,
-                  displayMode: displayMode,
-                  useStroke: _desktopLyricsController.useStroke.value,
-                  strokeColor: _desktopLyricsController.strokeColor.value,
-                )
-              else
-                _KaraOkLyricWidget(
-                  text: currentLine as List<WordEntry>,
-                  underStyle: underStyle,
-                  overlayStyle: overlayStyle,
-                  strutStyle: displayMode == Axis.vertical ? null : strutStyle,
-                  ctrl: _desktopLyricsController,
-                  displayMode: displayMode,
-                  begin: begin,
-                  end: end,
-                ),
-              if (currentTranslate.isNotEmpty)
-                _TranslateWidget(
-                  text: _splitString(currentTranslate, currentLine.length),
-                  underStyle: underStyle,
-                  strutStyle: null,
-                  ctrl: _desktopLyricsController,
-                  displayMode: displayMode,
-                ),
-            ],
-          ),
+        final underStyle = generalTextStyle(
+          ctx: context,
+          size: fontSize,
+          color: Color(_desktopLyricsController.underColor.value),
+          weight: FontWeight.values[fontWeight],
         );
-      });
-    });
+
+        final overlayStyle = generalTextStyle(
+          ctx: context,
+          size: fontSize,
+          color: Color(_desktopLyricsController.overlayColor.value),
+          weight: FontWeight.values[fontWeight],
+        );
+
+        final strutStyle = StrutStyle(
+          fontSize: fontSize.toDouble(),
+          forceStrutHeight: true,
+        );
+
+        return SignalBuilder(
+          builder: (context) {
+            final lrcType = _desktopLyricsController.lrcType.value;
+            final currentLine = _desktopLyricsController.currentLine.value;
+            CrossAxisAlignment lrcAlignment =
+                _lrcCrossAlignment[_desktopLyricsController.lrcAlignment.value];
+
+            if (_desktopLyricsController.lrcAlignment.value == 3 &&
+                _desktopLyricsController.showDoubleLine.value) {
+              if (_lyricsClient.lyricsCounter.value.isEven) {
+                lrcAlignment = _lrcCrossAlignment[0];
+              } else {
+                lrcAlignment = _lrcCrossAlignment[2];
+              }
+            }
+
+            if (currentLine == null) {
+              return const SizedBox.shrink();
+            }
+            final currentTranslate =
+                _desktopLyricsController.currentTranslate.value;
+
+            return Opacity(
+              opacity: _desktopLyricsController.fontOpacity.value,
+              child: Flex(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: lrcAlignment, // 切换对齐方式
+                direction: _desktopLyricsController.useVerticalDisplayMode.value
+                    ? Axis.horizontal
+                    : Axis.vertical,
+                children: [
+                  if (lrcType == LyricFormat.lrc)
+                    _LrcLyricWidget(
+                      text: currentLine as String,
+                      overlayStyle: overlayStyle,
+                      displayMode: displayMode,
+                      useStroke: _desktopLyricsController.useStroke.value,
+                      strokeColor: _desktopLyricsController.strokeColor.value,
+                    )
+                  else
+                    _KaraOkLyricWidget(
+                      text: currentLine as List<WordEntry>,
+                      underStyle: underStyle,
+                      overlayStyle: overlayStyle,
+                      strutStyle: displayMode == Axis.vertical
+                          ? null
+                          : strutStyle,
+                      ctrl: _desktopLyricsController,
+                      displayMode: displayMode,
+                      begin: begin,
+                      end: end,
+                    ),
+                  if (currentTranslate.isNotEmpty)
+                    _TranslateWidget(
+                      text: _splitString(currentTranslate, currentLine.length),
+                      underStyle: underStyle,
+                      strutStyle: null,
+                      ctrl: _desktopLyricsController,
+                      displayMode: displayMode,
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 }

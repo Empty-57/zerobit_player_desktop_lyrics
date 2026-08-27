@@ -1,7 +1,8 @@
 import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
-import 'package:get/get.dart';
+import 'package:get_it/get_it.dart';
+import 'package:signals/signals_flutter.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:zerobit_player_desktop_lyrics/tools/lrcTool/lyric_model.dart';
 
@@ -9,37 +10,43 @@ import '../desktop_lyrics_client.dart';
 
 enum AudioState { stop, playing, pause }
 
-class DesktopLyricsController extends GetxController with WindowListener {
-  final currentState = AudioState.stop.index.obs;
+class DesktopLyricsController with WindowListener {
+  DesktopLyricsController() {
+    windowManager.addListener(this);
+  }
 
-  final fontFamily = "Microsoft YaHei Light".obs;
-  final fontSize = 24.obs; // 16-36
-  final fontWeight = 5.obs; // 0-8  w100-w900
-  final overlayColor = 0xffff0000.obs;
-  final underColor = 0xff0000ff.obs;
-  final fontOpacity = 1.0.obs;
+  final currentState = signal(AudioState.stop.index);
 
-  final isIgnoreMouseEvents = false.obs;
+  final fontFamily = signal("Microsoft YaHei Light");
+  final fontSize = signal(24); // 16-36
+  final fontWeight = signal(5); // 0-8  w100-w900
+  final overlayColor = signal(0xffff0000);
+  final underColor = signal(0xff0000ff);
+  final fontOpacity = signal(1.0);
 
-  final currentWordIndex = 0.obs;
-  final ValueNotifier<double> wordProgress = ValueNotifier<double>(0.0);
-  final lrcType = LyricFormat.lrc.obs;
-  final currentLine = Rx<dynamic>('ZeroBit Player');
-  final currentTranslate = ''.obs;
-  final nextLine = Rx<dynamic>('ZeroBit Player');
-  final nextTranslate = ''.obs;
+  final isIgnoreMouseEvents = signal(false);
 
-  final lrcAlignment = 1.obs;
+  final currentWordIndex = signal(0);
 
-  final useVerticalDisplayMode = false.obs;
+  final wordProgress = signal(0.0); // ValueNotifier
 
-  final useStroke = true.obs;
+  final lrcType = signal(LyricFormat.lrc);
+  final currentLine = signal<dynamic>('ZeroBit Player');
+  final currentTranslate = signal('');
+  final nextLine = signal<dynamic>('ZeroBit Player');
+  final nextTranslate = signal('');
 
-  final strokeColor = 0xff000000.obs;
+  final lrcAlignment = signal(1);
 
-  final showDoubleLine = false.obs;
+  final useVerticalDisplayMode = signal(false);
 
-  final lyricsSwitchAnimateMode = 1.obs; // 0 无动画 1 淡入淡出 2滑动 3 缩放
+  final useStroke = signal(true);
+
+  final strokeColor = signal(0xff000000);
+
+  final showDoubleLine = signal(false);
+
+  final lyricsSwitchAnimateMode = signal(1); // 0 无动画 1 淡入淡出 2滑动 3 缩放
 
   static const double widthIncrement = 12;
   static const double heightIncrement = 2.5;
@@ -55,7 +62,7 @@ class DesktopLyricsController extends GetxController with WindowListener {
 
   static const double toolBarHeight = 40;
 
-  DesktopLyricsClient get _lyricsClient => Get.find<DesktopLyricsClient>();
+  DesktopLyricsClient get _lyricsClient => GetIt.I<DesktopLyricsClient>();
 
   Future<void> calcSize([double? w, double? h]) async {
     final size = await windowManager.getSize();
@@ -86,12 +93,12 @@ class DesktopLyricsController extends GetxController with WindowListener {
     await windowManager.setSize(Size(w, h));
   }
 
-  void addFontSize() async {
+  void addFontSize() {
     fontSize.value++;
     fontSize.value = fontSize.value.clamp(fontSizeMin, fontSizeMax);
   }
 
-  void decFontSize() async {
+  void decFontSize() {
     fontSize.value--;
     fontSize.value = fontSize.value.clamp(fontSizeMin, fontSizeMax);
   }
@@ -100,22 +107,13 @@ class DesktopLyricsController extends GetxController with WindowListener {
     fontSize.value = size.clamp(fontSizeMin, fontSizeMax);
   }
 
-  void setUseVerticalDisplayMode({required use}) {
+  void setUseVerticalDisplayMode({required bool use}) {
     useVerticalDisplayMode.value = use;
     calcSize();
   }
 
-  @override
-  void onInit() async {
-    windowManager.addListener(this);
-    super.onInit();
-  }
-
-  @override
-  void onClose() {
+  void dispose() {
     windowManager.removeListener(this);
-    wordProgress.dispose();
-    super.onClose();
   }
 
   @override

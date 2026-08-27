@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:get_it/get_it.dart';
 
-import '../getx_ctrl/desktop_lyrics_ctrl.dart';
+import '../controller/desktop_lyrics_ctrl.dart';
 
 final DesktopLyricsController _desktopLyricsController =
-    Get.find<DesktopLyricsController>();
+    GetIt.I<DesktopLyricsController>();
 
 TextStyle generalTextStyle<T>({
   required BuildContext ctx,
