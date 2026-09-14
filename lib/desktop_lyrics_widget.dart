@@ -445,7 +445,6 @@ class LyricsRender extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final a = signal(1);
     return SignalBuilder(
       builder: (context) {
         final fontSize = _desktopLyricsController.fontSize.value;
