@@ -38,6 +38,7 @@ dependencies:
   flutter_single_instance: ^1.5.1
 
 dev_dependencies:
+  signals_lint: ^7.1.0
   flutter_test:
     sdk: flutter
 
@@ -47,6 +48,11 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+
+analyzer:
+  plugins:
+    - signals_lint
+
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
