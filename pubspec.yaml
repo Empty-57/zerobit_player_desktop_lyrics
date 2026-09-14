@@ -38,9 +38,9 @@ dependencies:
   flutter_single_instance: ^1.5.1
 
 dev_dependencies:
-  signals_lint: ^7.1.0
   flutter_test:
     sdk: flutter
+  signals_lint: ^7.1.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
