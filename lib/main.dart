@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -5,21 +6,32 @@ import 'package:flutter_single_instance/flutter_single_instance.dart';
 import 'package:get_it/get_it.dart';
 import 'package:signals/signals_flutter.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:zerobit_player_desktop_lyrics/tool_bar.dart';
 
 import 'controller/desktop_lyrics_ctrl.dart';
+import 'controller/display_settings.dart';
 import 'desktop_lyrics_client.dart';
 import 'desktop_lyrics_next_widget.dart';
 import 'desktop_lyrics_widget.dart';
+import 'tool_bar.dart';
 
 final _isHover = signal(false);
-const _lrcCrossAlignment = [
-  CrossAxisAlignment.start,
-  CrossAxisAlignment.center,
-  CrossAxisAlignment.end,
-  CrossAxisAlignment.start,
-];
-void main() async {
+
+/// 窗口边缘可拖拽缩放的热区厚度
+const _resizeAreaSize = 10.0;
+
+const _horizontalWindowSize = Size(
+  DesktopLyricsController.windowWidthMax,
+  DesktopLyricsController.windowHeightMax +
+      DesktopLyricsController.toolBarHeight,
+);
+
+const _verticalWindowSize = Size(
+  DesktopLyricsController.windowHeightMax +
+      DesktopLyricsController.toolBarHeight,
+  DesktopLyricsController.windowWidthMax,
+);
+
+Future<void> main() async {
   if (!await FlutterSingleInstance().isFirstInstance()) {
     await FlutterSingleInstance().focus();
     exit(0);
@@ -30,402 +42,354 @@ void main() async {
 
   GetIt.I.registerSingleton<DesktopLyricsController>(
     DesktopLyricsController(),
-    dispose: (c) => c.dispose(),
+    dispose: (controller) => controller.dispose(),
   );
   GetIt.I.registerSingleton<DesktopLyricsClient>(DesktopLyricsClient());
 
-  final DesktopLyricsClient lyricsClient = GetIt.I<DesktopLyricsClient>();
-  final DesktopLyricsController desktopLyricsController =
-      GetIt.I<DesktopLyricsController>();
-
-  WindowOptions windowOptions = WindowOptions(
-    size: Size(
-      desktopLyricsController.useVerticalDisplayMode.value
-          ? DesktopLyricsController.windowHeightMax.toDouble() +
-                DesktopLyricsController.toolBarHeight
-          : DesktopLyricsController.windowWidthMax.toDouble(),
-      desktopLyricsController.useVerticalDisplayMode.value
-          ? DesktopLyricsController.windowWidthMax.toDouble()
-          : DesktopLyricsController.windowHeightMax.toDouble() +
-                DesktopLyricsController.toolBarHeight,
-    ),
+  final windowOptions = WindowOptions(
+    size: GetIt.I<DesktopLyricsController>().useVerticalDisplayMode.value
+        ? _verticalWindowSize
+        : _horizontalWindowSize,
     backgroundColor: Colors.transparent,
     skipTaskbar: true,
     titleBarStyle: TitleBarStyle.hidden,
     alwaysOnTop: true,
     title: 'ZeroBit Player Lyrics',
   );
-  windowManager.waitUntilReadyToShow(windowOptions, () async {
-    lyricsClient.connect();
-    await windowManager.setAsFrameless();
-    await windowManager.setResizable(true);
-    await windowManager.setAlwaysOnTop(true);
-    // await desktopLyricsController.calcSize();
-    await windowManager.show();
-  });
+
+  unawaited(
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      unawaited(GetIt.I<DesktopLyricsClient>().connect());
+      await windowManager.setAsFrameless();
+      await windowManager.setResizable(true);
+      await windowManager.setAlwaysOnTop(true);
+      await windowManager.show();
+    }),
+  );
+
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  final double _resizeAreaSize = 10.0;
-
   @override
   Widget build(BuildContext context) {
-    final DesktopLyricsController desktopLyricsController =
-        GetIt.I<DesktopLyricsController>();
-    final DesktopLyricsClient lyricsClient = GetIt.I<DesktopLyricsClient>();
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
-      home: LayoutBuilder(
-        builder: (_, constraints) => GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onPanStart: (details) =>
-              desktopLyricsController.isIgnoreMouseEvents.value
-              ? null
-              : windowManager.startDragging(),
-          child: MouseRegion(
-            onEnter: (_) => _isHover.value = true,
-            onExit: (_) => _isHover.value = false,
-            child: Stack(
-              children: [
-                SignalBuilder(
-                  builder: (context) {
-                    final counter = lyricsClient.lyricsCounter.value;
-                    final isEven = counter.isEven;
-                    final lrcAlignment =
-                        desktopLyricsController.lrcAlignment.value;
-                    final useVertical =
-                        desktopLyricsController.useVerticalDisplayMode.value;
-                    final showDoubleLine =
-                        desktopLyricsController.showDoubleLine.value;
-                    final isIgnoreMouse =
-                        desktopLyricsController.isIgnoreMouseEvents.value;
-                    final animateMode =
-                        desktopLyricsController.lyricsSwitchAnimateMode.value;
-
-                    // 槽位1 在 counter 为 1, 3, 5 时触发动画
-                    final currSlotVersion = (counter + 1) ~/ 2;
-                    // 槽位2 在 counter 为 0, 2, 4 时触发动画
-                    final nextSlotVersion = counter ~/ 2;
-
-                    Alignment getStackAlignment(bool isNextSlot) {
-                      if (lrcAlignment == 3) {
-                        if (isNextSlot) {
-                          return useVertical
-                              ? Alignment.bottomCenter
-                              : Alignment.centerRight;
-                        }
-                        return useVertical
-                            ? Alignment.topCenter
-                            : Alignment.centerLeft;
-                      }
-                      if (useVertical) {
-                        if (lrcAlignment == 0) return Alignment.topCenter;
-                        if (lrcAlignment == 2) return Alignment.bottomCenter;
-                        return Alignment.center;
-                      } else {
-                        if (lrcAlignment == 0) return Alignment.centerLeft;
-                        if (lrcAlignment == 2) return Alignment.centerRight;
-                        return Alignment.center;
-                      }
-                    }
-
-                    Widget getAnimatedChild(
-                      Animation<double> animation,
-                      Widget child,
-                    ) {
-                      if (animateMode == 2) {
-                        return SlideTransition(
-                          position: Tween<Offset>(
-                            begin: useVertical
-                                ? const Offset(0.1, 0)
-                                : const Offset(0, -0.1),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        );
-                      }
-                      if (animateMode == 3) {
-                        return ScaleTransition(
-                          scale: Tween<double>(
-                            begin: 0.8,
-                            end: 1.0,
-                          ).animate(animation),
-                          child: child,
-                        );
-                      }
-                      return child;
-                    }
-
-                    Widget buildAnimatedLyric(
-                      Widget child,
-                      Key animationKey,
-                      bool isNextSlot,
-                    ) {
-                      if (animateMode == 0) {
-                        return child;
-                      }
-
-                      return AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 500),
-                        switchInCurve: Curves.easeOutCubic,
-                        layoutBuilder:
-                            (
-                              Widget? currentChild,
-                              List<Widget> previousChildren,
-                            ) {
-                              return Stack(
-                                alignment: getStackAlignment(isNextSlot),
-                                children: <Widget>[
-                                  // 抛弃 previousChildren，避免旧文本瞬间的字形闪烁
-                                  if (currentChild != null) currentChild,
-                                ],
-                              );
-                            },
-                        transitionBuilder:
-                            (Widget child, Animation<double> animation) {
-                              return FadeTransition(
-                                opacity: Tween<double>(
-                                  begin: 0.4,
-                                  end: 1.0,
-                                ).animate(animation),
-                                child: getAnimatedChild(animation, child),
-                              );
-                            },
-                        // 用key触发动画
-                        child: KeyedSubtree(key: animationKey, child: child),
-                      );
-                    }
-
-                    Widget currLyrics;
-                    Widget nextLyrics;
-
-                    if (!showDoubleLine) {
-                      currLyrics = Expanded(
-                        child: buildAnimatedLyric(
-                          const LyricsRender(),
-                          ValueKey('single_$counter'),
-                          false,
-                        ),
-                      );
-                      nextLyrics = const SizedBox.shrink();
-                    } else {
-                      currLyrics = Expanded(
-                        child: buildAnimatedLyric(
-                          isEven
-                              ? const LyricsRender()
-                              : const LyricsNextRender(),
-                          // 只有奇数次才触发动画
-                          ValueKey('curr_$currSlotVersion'),
-                          false,
-                        ),
-                      );
-
-                      Widget nextContent = isEven
-                          ? const LyricsNextRender()
-                          : const LyricsRender();
-
-                      if (lrcAlignment == 3) {
-                        nextLyrics = Expanded(
-                          child: Align(
-                            alignment: useVertical
-                                ? Alignment.bottomCenter
-                                : Alignment.centerRight,
-                            child: buildAnimatedLyric(
-                              nextContent,
-                              // 只有偶数次才触发动画
-                              ValueKey('next_$nextSlotVersion'),
-                              true,
-                            ),
-                          ),
-                        );
-                      } else {
-                        nextLyrics = Expanded(
-                          child: buildAnimatedLyric(
-                            nextContent,
-                            ValueKey('next_$nextSlotVersion'),
-                            true,
-                          ),
-                        );
-                      }
-                    }
-
-                    return Container(
-                      width: constraints.maxWidth,
-                      height: constraints.maxHeight,
-                      color: _isHover.value && !isIgnoreMouse
-                          ? Colors.black.withValues(alpha: 0.4)
-                          : Colors.transparent,
-                      child: Flex(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment:
-                            _lrcCrossAlignment[lrcAlignment == 3
-                                ? 0
-                                : lrcAlignment],
-                        direction: useVertical
-                            ? Axis.horizontal
-                            : Axis.vertical,
-                        children: [
-                          ToolBar(isHover: _isHover),
-                          currLyrics,
-                          nextLyrics,
-                        ],
-                      ),
-                    );
-                  },
-                ),
-
-                // 左侧调整大小热区
-                Positioned(
-                  left: 0,
-                  top: _resizeAreaSize, // 避开顶部标题栏
-                  bottom: _resizeAreaSize,
-                  width: _resizeAreaSize,
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.resizeLeftRight,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onPanStart: (_) {
-                        windowManager.startResizing(ResizeEdge.left);
-                      },
-                      child: Container(color: Colors.transparent),
-                    ),
-                  ),
-                ),
-
-                // 右侧调整大小热区
-                Positioned(
-                  right: 0,
-                  top: _resizeAreaSize,
-                  bottom: _resizeAreaSize,
-                  width: _resizeAreaSize,
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.resizeLeftRight,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onPanStart: (_) {
-                        windowManager.startResizing(ResizeEdge.right);
-                      },
-                      child: Container(color: Colors.transparent),
-                    ),
-                  ),
-                ),
-
-                // 顶部调整大小热区（标题栏下方）
-                Positioned(
-                  top: 0,
-                  left: _resizeAreaSize,
-                  right: _resizeAreaSize,
-                  height: _resizeAreaSize,
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.resizeUpDown,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onPanStart: (_) {
-                        windowManager.startResizing(ResizeEdge.top);
-                      },
-                      child: Container(color: Colors.transparent),
-                    ),
-                  ),
-                ),
-
-                // 底部调整大小热区
-                Positioned(
-                  bottom: 0,
-                  left: _resizeAreaSize,
-                  right: _resizeAreaSize,
-                  height: _resizeAreaSize,
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.resizeUpDown,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onPanStart: (_) {
-                        windowManager.startResizing(ResizeEdge.bottom);
-                      },
-                      child: Container(color: Colors.transparent),
-                    ),
-                  ),
-                ),
-
-                // 左上角调整大小热区
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  width: _resizeAreaSize,
-                  height: _resizeAreaSize,
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.resizeUpLeftDownRight,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onPanStart: (_) {
-                        windowManager.startResizing(ResizeEdge.topLeft);
-                      },
-                      child: Container(color: Colors.transparent),
-                    ),
-                  ),
-                ),
-
-                // 右上角调整大小热区
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  width: _resizeAreaSize,
-                  height: _resizeAreaSize,
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.resizeUpRightDownLeft,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onPanStart: (_) {
-                        windowManager.startResizing(ResizeEdge.topRight);
-                      },
-                      child: Container(color: Colors.transparent),
-                    ),
-                  ),
-                ),
-
-                // 左下角调整大小热区
-                Positioned(
-                  left: 0,
-                  bottom: 0,
-                  width: _resizeAreaSize,
-                  height: _resizeAreaSize,
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.resizeUpRightDownLeft,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onPanStart: (_) {
-                        windowManager.startResizing(ResizeEdge.bottomLeft);
-                      },
-                      child: Container(color: Colors.transparent),
-                    ),
-                  ),
-                ),
-
-                // 右下角调整大小热区
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  width: _resizeAreaSize,
-                  height: _resizeAreaSize,
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.resizeUpLeftDownRight,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onPanStart: (_) {
-                        windowManager.startResizing(ResizeEdge.bottomRight);
-                      },
-                      child: Container(color: Colors.transparent),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+      home: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onPanStart: (_) {
+          if (GetIt.I<DesktopLyricsController>().isIgnoreMouseEvents.value) {
+            return;
+          }
+          windowManager.startDragging();
+        },
+        child: MouseRegion(
+          onEnter: (_) => _isHover.value = true,
+          onExit: (_) => _isHover.value = false,
+          child: Stack(
+            children: [
+              const Positioned.fill(child: _HoverBackground()),
+              const Positioned.fill(child: _LyricsLayer()),
+              ..._resizeHandleWidgets,
+            ],
           ),
         ),
       ),
     );
   }
+}
+
+/// 悬停时的半透明底色
+class _HoverBackground extends StatelessWidget {
+  const _HoverBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return SignalBuilder(
+      builder: (context) {
+        final dimmed =
+            _isHover.value &&
+            !GetIt.I<DesktopLyricsController>().isIgnoreMouseEvents.value;
+        return ColoredBox(
+          color: dimmed
+              ? Colors.black.withValues(alpha: 0.4)
+              : Colors.transparent,
+        );
+      },
+    );
+  }
+}
+
+/// 工具栏 + 歌词。
+class _LyricsLayer extends StatelessWidget {
+  const _LyricsLayer();
+
+  @override
+  Widget build(BuildContext context) {
+    return SignalBuilder(
+      builder: (context) {
+        final ctrl = GetIt.I<DesktopLyricsController>();
+        final counter = GetIt.I<DesktopLyricsClient>().lyricsCounter.value;
+        final alignment = ctrl.lrcAlignment.value;
+        final animation = ctrl.lyricsSwitchAnimateMode.value;
+        final vertical = ctrl.useVerticalDisplayMode.value;
+
+        final Widget currSlot;
+        Widget nextSlot;
+
+        if (!ctrl.showDoubleLine.value) {
+          currSlot = _AnimatedLyricSlot(
+            version: 'single_$counter',
+            isNextSlot: false,
+            alignment: alignment,
+            animation: animation,
+            vertical: vertical,
+            child: const LyricsRender(),
+          );
+          nextSlot = const SizedBox.shrink();
+        } else {
+          // 两个渲染器在两个槽位间轮换：counter 为偶数时当前行在前一个槽位，
+          // 奇数时换到后一个。槽位的版本号只在轮到自己时递增，
+          currSlot = _AnimatedLyricSlot(
+            version: 'curr_${(counter + 1) ~/ 2}',
+            isNextSlot: false,
+            alignment: alignment,
+            animation: animation,
+            vertical: vertical,
+            child: counter.isEven
+                ? const LyricsRender()
+                : const LyricsNextRender(),
+          );
+          nextSlot = _AnimatedLyricSlot(
+            version: 'next_${counter ~/ 2}',
+            isNextSlot: true,
+            alignment: alignment,
+            animation: animation,
+            vertical: vertical,
+            child: counter.isEven
+                ? const LyricsNextRender()
+                : const LyricsRender(),
+          );
+          if (alignment == LyricAlignment.alternate) {
+            // 交替对齐下容器取 start（见 containerAlignment），
+            // 下一行得自己贴到对面那一端去
+            nextSlot = Align(
+              alignment: vertical
+                  ? Alignment.bottomCenter
+                  : Alignment.centerRight,
+              child: nextSlot,
+            );
+          }
+          nextSlot = Expanded(child: nextSlot);
+        }
+
+        return Flex(
+          direction: vertical ? Axis.horizontal : Axis.vertical,
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: alignment.containerAlignment,
+          children: [
+            ToolBar(isHover: _isHover),
+            Expanded(child: currSlot),
+            nextSlot,
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// 一个歌词槽位。[version] 变化即播放一次切换动画。
+class _AnimatedLyricSlot extends StatelessWidget {
+  const _AnimatedLyricSlot({
+    required this.child,
+    required this.version,
+    required this.isNextSlot,
+    required this.alignment,
+    required this.animation,
+    required this.vertical,
+  });
+
+  final Widget child;
+  final String version;
+  final bool isNextSlot;
+
+  final LyricAlignment alignment;
+  final LyricSwitchAnimation animation;
+  final bool vertical;
+
+  /// 动画期间新旧文本叠放的位置：与歌词自身的对齐方向一致，
+  /// 否则滑动 / 缩放会从错误的一侧进入。
+  Alignment get _stackAlignment => switch (alignment) {
+    LyricAlignment.alternate when isNextSlot =>
+      vertical ? Alignment.bottomCenter : Alignment.centerRight,
+    LyricAlignment.alternate || LyricAlignment.start =>
+      vertical ? Alignment.topCenter : Alignment.centerLeft,
+    LyricAlignment.end =>
+      vertical ? Alignment.bottomCenter : Alignment.centerRight,
+    LyricAlignment.center => Alignment.center,
+  };
+
+  Widget _applyMotion(Animation<double> value, Widget child) =>
+      switch (animation) {
+        LyricSwitchAnimation.slide => SlideTransition(
+          position: Tween<Offset>(
+            begin: vertical ? const Offset(0.1, 0) : const Offset(0, -0.1),
+            end: Offset.zero,
+          ).animate(value),
+          child: child,
+        ),
+        LyricSwitchAnimation.scale => ScaleTransition(
+          filterQuality: .low,
+          scale: Tween<double>(begin: 0.8, end: 1.0).animate(value),
+          child: child,
+        ),
+        // 淡入淡出由下面那层 FadeTransition 统一负责
+        LyricSwitchAnimation.none || LyricSwitchAnimation.fade => child,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    if (animation == LyricSwitchAnimation.none) return child;
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      switchInCurve: Curves.easeOutCubic,
+      layoutBuilder: (currentChild, previousChildren) => Stack(
+        alignment: _stackAlignment,
+        // 抛弃 previousChildren，避免旧文本瞬间的字形闪烁
+        children: [if (currentChild != null) currentChild],
+      ),
+      transitionBuilder: (child, value) => FadeTransition(
+        opacity: Tween<double>(begin: 0.4, end: 1.0).animate(value),
+        child: _applyMotion(value, child),
+      ),
+      // 用 key 触发动画
+      child: KeyedSubtree(key: ValueKey(version), child: child),
+    );
+  }
+}
+
+/// 一个缩放热区的位置描述。某个方向为 null 表示不在该方向定位。
+class _ResizeHandleSpec {
+  const _ResizeHandleSpec({
+    required this.edge,
+    required this.cursor,
+    this.left,
+    this.top,
+    this.right,
+    this.bottom,
+    this.width,
+    this.height,
+  });
+
+  final ResizeEdge edge;
+  final MouseCursor cursor;
+  final double? left;
+  final double? top;
+  final double? right;
+  final double? bottom;
+  final double? width;
+  final double? height;
+}
+
+/// 四条边 + 四个角。四条边各让出角上的 [_resizeAreaSize]，
+/// 保证角落触发的是斜向缩放。
+const _resizeHandles = <_ResizeHandleSpec>[
+  _ResizeHandleSpec(
+    edge: ResizeEdge.left,
+    cursor: SystemMouseCursors.resizeLeftRight,
+    left: 0,
+    top: _resizeAreaSize,
+    bottom: _resizeAreaSize,
+    width: _resizeAreaSize,
+  ),
+  _ResizeHandleSpec(
+    edge: ResizeEdge.right,
+    cursor: SystemMouseCursors.resizeLeftRight,
+    right: 0,
+    top: _resizeAreaSize,
+    bottom: _resizeAreaSize,
+    width: _resizeAreaSize,
+  ),
+  _ResizeHandleSpec(
+    edge: ResizeEdge.top,
+    cursor: SystemMouseCursors.resizeUpDown,
+    top: 0,
+    left: _resizeAreaSize,
+    right: _resizeAreaSize,
+    height: _resizeAreaSize,
+  ),
+  _ResizeHandleSpec(
+    edge: ResizeEdge.bottom,
+    cursor: SystemMouseCursors.resizeUpDown,
+    bottom: 0,
+    left: _resizeAreaSize,
+    right: _resizeAreaSize,
+    height: _resizeAreaSize,
+  ),
+  _ResizeHandleSpec(
+    edge: ResizeEdge.topLeft,
+    cursor: SystemMouseCursors.resizeUpLeftDownRight,
+    top: 0,
+    left: 0,
+    width: _resizeAreaSize,
+    height: _resizeAreaSize,
+  ),
+  _ResizeHandleSpec(
+    edge: ResizeEdge.topRight,
+    cursor: SystemMouseCursors.resizeUpRightDownLeft,
+    top: 0,
+    right: 0,
+    width: _resizeAreaSize,
+    height: _resizeAreaSize,
+  ),
+  _ResizeHandleSpec(
+    edge: ResizeEdge.bottomLeft,
+    cursor: SystemMouseCursors.resizeUpRightDownLeft,
+    bottom: 0,
+    left: 0,
+    width: _resizeAreaSize,
+    height: _resizeAreaSize,
+  ),
+  _ResizeHandleSpec(
+    edge: ResizeEdge.bottomRight,
+    cursor: SystemMouseCursors.resizeUpLeftDownRight,
+    bottom: 0,
+    right: 0,
+    width: _resizeAreaSize,
+    height: _resizeAreaSize,
+  ),
+];
+
+/// 热区不随状态变化，构建一次即可。
+final _resizeHandleWidgets = <Widget>[
+  for (final spec in _resizeHandles) _ResizeHandle(spec),
+];
+
+class _ResizeHandle extends StatelessWidget {
+  const _ResizeHandle(this.spec);
+
+  final _ResizeHandleSpec spec;
+
+  @override
+  Widget build(BuildContext context) => Positioned(
+    left: spec.left,
+    top: spec.top,
+    right: spec.right,
+    bottom: spec.bottom,
+    width: spec.width,
+    height: spec.height,
+    child: MouseRegion(
+      cursor: spec.cursor,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onPanStart: (_) => windowManager.startResizing(spec.edge),
+        // 把热区撑满的空盒子
+        child: const SizedBox.expand(),
+      ),
+    ),
+  );
 }

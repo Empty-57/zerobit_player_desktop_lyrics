@@ -1,39 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:signals/signals_flutter.dart';
-import 'package:zerobit_player_desktop_lyrics/tools/lrcTool/lyrics_text_display_widget.dart';
 
-import '../tools/general_style.dart';
-import '../tools/lrcTool/lyric_model.dart';
 import 'controller/desktop_lyrics_ctrl.dart';
 import 'desktop_lyrics_client.dart';
+import 'tools/lrcTool/furigana_line.dart';
+import 'tools/lrcTool/lyric_model.dart';
+import 'tools/lrcTool/lyrics_text_display_widget.dart';
+import 'tools/lyric_text_style.dart';
 
 final DesktopLyricsController _desktopLyricsController =
     GetIt.I<DesktopLyricsController>();
 final DesktopLyricsClient _lyricsClient = GetIt.I<DesktopLyricsClient>();
 
-const _lrcCrossAlignment = [
-  CrossAxisAlignment.start,
-  CrossAxisAlignment.center,
-  CrossAxisAlignment.end,
-  CrossAxisAlignment.start,
-];
+/// 沿 [axis] 平移渐变并在该方向上缩放，用于把「已唱 / 未唱」的分界推到字的某个位置。
+class _ProgressGradientTransform extends GradientTransform {
+  const _ProgressGradientTransform({
+    required this.axis,
+    required this.offset,
+    required this.scale,
+  });
 
-class _HighlightedWord extends StatelessWidget {
-  final String text;
-  final String furigana;
-  final double progress;
-  final TextStyle underStyle;
-  final TextStyle overlayStyle;
-  final StrutStyle? strutStyle;
+  final Axis axis;
+  final double offset;
   final double scale;
-  final Alignment begin;
-  final Alignment end;
-  final Axis displayMode;
-  final bool useStroke;
-  final int strokeColor;
-  final bool showFurigana;
 
+  @override
+  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) =>
+      axis == Axis.vertical
+      ? (Matrix4.diagonal3Values(1, scale, 1)
+          ..setTranslationRaw(0, scale * offset, 0))
+      : (Matrix4.diagonal3Values(scale, 1, 1)
+          ..setTranslationRaw(scale * offset, 0, 0));
+
+  /// 值相等时可跳过重建着色器。
+  @override
+  bool operator ==(Object other) =>
+      other is _ProgressGradientTransform &&
+      other.axis == axis &&
+      other.offset == offset &&
+      other.scale == scale;
+
+  @override
+  int get hashCode => Object.hash(axis, offset, scale);
+}
+
+/// 正在演唱的那个字：在底色文本之上用 [ShaderMask] 推进一条「已唱」的渐变。
+class _HighlightedWord extends StatelessWidget {
   const _HighlightedWord({
     required this.text,
     required this.progress,
@@ -46,429 +59,155 @@ class _HighlightedWord extends StatelessWidget {
     required this.displayMode,
     required this.useStroke,
     required this.strokeColor,
-    required this.furigana,
-    required this.showFurigana,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    final shaderText = ShaderMask(
-      shaderCallback: (bounds) {
-        const double offsetFactor = -0.666;
-        final double offset =
-            (displayMode == Axis.vertical ? bounds.height : bounds.width) *
-            (offsetFactor * (1 - progress));
-        return LinearGradient(
-          begin: begin,
-          end: end,
-          colors: [overlayStyle.color!, overlayStyle.color!, underStyle.color!],
-          stops: [0.0, 0.333, 0.666],
-          transform: displayMode == Axis.vertical
-              ? _ScaledVerticalTranslateGradientTransform(
-                  dy: offset,
-                  translateGradientScale: scale,
-                )
-              : _ScaledTranslateGradientTransform(
-                  dx: offset,
-                  translateGradientScale: scale,
-                ),
-        ).createShader(bounds);
-      },
-      blendMode: BlendMode.srcIn,
-      child: TextDisplayWidget(
-        text: text,
-        furigana: furigana,
-        style: underStyle,
-        strutStyle: strutStyle,
-        displayMode: displayMode,
-        useStroke: false,
-        strokeColor: strokeColor,
-        showFurigana: showFurigana,
-      ),
-    );
-
-    return useStroke
-        ? Stack(
-            children: [
-              // --- 第一层：负责显示阴影 ---
-              TextDisplayWidget(
-                text: text,
-                furigana: furigana,
-                style: underStyle.copyWith(color: Colors.transparent),
-                strutStyle: strutStyle,
-                displayMode: displayMode,
-                useStroke: true,
-                strokeColor: strokeColor,
-                showFurigana: showFurigana,
-              ),
-
-              // --- 第二层：负责显示渐变 (ShaderMask) ---
-              shaderText,
-            ],
-          )
-        : shaderText;
-  }
-}
-
-class _ScaledTranslateGradientTransform extends GradientTransform {
-  final double dx;
-  final double translateGradientScale;
-  const _ScaledTranslateGradientTransform({
-    required this.dx,
-    required this.translateGradientScale,
-  });
-
-  @override
-  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) {
-    return Matrix4.diagonal3Values(translateGradientScale, 1, 1)
-      ..setTranslationRaw(translateGradientScale * dx, 0, 0);
-  }
-}
-
-class _ScaledVerticalTranslateGradientTransform extends GradientTransform {
-  final double dy;
-  final double translateGradientScale;
-  const _ScaledVerticalTranslateGradientTransform({
-    required this.dy,
-    required this.translateGradientScale,
-  });
-  @override
-  Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
-    return Matrix4.diagonal3Values(1, translateGradientScale, 1)
-      ..setTranslationRaw(0, translateGradientScale * dy, 0);
-  }
-}
-
-class _LrcLyricWidget extends StatelessWidget {
   final String text;
+  final ReadonlySignal<double> progress;
+  final TextStyle underStyle;
   final TextStyle overlayStyle;
+  final StrutStyle? strutStyle;
+  final double scale;
+  final Alignment begin;
+  final Alignment end;
   final Axis displayMode;
   final bool useStroke;
   final int strokeColor;
 
-  const _LrcLyricWidget({
-    required this.text,
-    required this.overlayStyle,
-    required this.displayMode,
-    required this.useStroke,
-    required this.strokeColor,
-  });
-
   @override
   Widget build(BuildContext context) {
-    return TextDisplayWidget(
+    final maskedText = TextDisplayWidget(
       text: text,
-      showFurigana: false,
-      furigana: '',
-      style: overlayStyle,
+      style: underStyle,
+      strutStyle: strutStyle,
       displayMode: displayMode,
-      strutStyle: null,
-      useStroke: useStroke,
+      useStroke: false,
       strokeColor: strokeColor,
+    );
+
+    final shaderText = SignalBuilder(
+      builder: (context) {
+        final value = progress.value;
+        return ShaderMask(
+          shaderCallback: (bounds) {
+            const offsetFactor = -0.666;
+            final extent = displayMode == Axis.vertical
+                ? bounds.height
+                : bounds.width;
+            return LinearGradient(
+              begin: begin,
+              end: end,
+              colors: [
+                overlayStyle.color!,
+                overlayStyle.color!,
+                underStyle.color!,
+              ],
+              stops: const [0.0, 0.333, 0.666],
+              transform: _ProgressGradientTransform(
+                axis: displayMode,
+                offset: extent * offsetFactor * (1 - value),
+                scale: scale,
+              ),
+            ).createShader(bounds);
+          },
+          blendMode: BlendMode.srcIn,
+          child: maskedText,
+        );
+      },
+    );
+
+    if (!useStroke) return shaderText;
+
+    return Stack(
+      children: [
+        // 底层只负责描边：正文透明，只有阴影透出来
+        TextDisplayWidget(
+          text: text,
+          style: underStyle.copyWith(color: Colors.transparent),
+          strutStyle: strutStyle,
+          displayMode: displayMode,
+          useStroke: true,
+          strokeColor: strokeColor,
+        ),
+        shaderText,
+      ],
     );
   }
 }
 
-class _KaraOkLyricWidget extends StatefulWidget {
-  final List<WordEntry> text;
-  final TextStyle underStyle;
-  final TextStyle overlayStyle;
-  final StrutStyle? strutStyle;
-  final DesktopLyricsController ctrl;
-  final Axis displayMode;
-  final Alignment begin;
-  final Alignment end;
-  final bool showFurigana;
+List<GlobalKey> _makeKeys(int count) =>
+    List.generate(count, (_) => GlobalKey(), growable: false);
 
-  const _KaraOkLyricWidget({
-    required this.text,
+/// 把第 [index] 个字滚进视野。[alignment] 是它在视口中的落点比例。
+Future<void> _ensureIndexVisible(
+  List<GlobalKey> keys,
+  int index, {
+  required double alignment,
+}) async {
+  if (index < 0 || index >= keys.length) return;
+  final context = keys[index].currentContext;
+  if (context == null) return;
+  await Scrollable.ensureVisible(
+    context,
+    duration: const Duration(milliseconds: 200),
+    curve: Curves.linear,
+    alignment: alignment,
+  );
+}
+
+class _KaraokeLine extends StatefulWidget {
+  const _KaraokeLine({
+    required this.words,
     required this.underStyle,
     required this.overlayStyle,
     required this.strutStyle,
-    required this.ctrl,
     required this.displayMode,
     required this.begin,
     required this.end,
-    required this.showFurigana,
   });
 
-  @override
-  State<_KaraOkLyricWidget> createState() => _KaraOkLyricWidgetState();
-}
-
-class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
-  final ScrollController _scrollController = ScrollController();
-  final List<GlobalKey> _wordKeys = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _ensureKeys();
-  }
-
-  @override
-  void didUpdateWidget(covariant _KaraOkLyricWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.text.length != widget.text.length) {
-      _ensureKeys();
-    }
-  }
-
-  void _ensureKeys() {
-    if (_wordKeys.length != widget.text.length) {
-      _wordKeys
-        ..clear()
-        ..addAll(List.generate(widget.text.length, (_) => GlobalKey()));
-    }
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _scrollToIndex(int index) async {
-    if (index < 0 || index >= _wordKeys.length) return;
-    final ctx = _wordKeys[index].currentContext;
-    if (ctx == null) return;
-    await Scrollable.ensureVisible(
-      ctx,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.linear,
-      alignment: 0.4,
-    );
-  }
-
-  Widget _buildFuriganaLine(Widget Function(int, WordEntry) build) {
-    final vertical = widget.displayMode == Axis.vertical;
-    final List<Widget> lineChildren = [];
-    int i = 0;
-
-    final furiganaBaseStyle = widget.underStyle.copyWith(
-      fontSize: (widget.underStyle.fontSize ?? 32) * 0.6,
-      height: 1,
-    );
-
-    final furiganaStyle = widget.ctrl.useStroke.value
-        ? furiganaBaseStyle.copyWith(
-            shadows: [
-              Shadow(
-                color: Color(widget.ctrl.strokeColor.value),
-                offset: const Offset(-1.2, -1.2),
-                blurRadius: 1.5,
-              ),
-            ],
-          )
-        : furiganaBaseStyle;
-
-    while (i < widget.text.length) {
-      final entry = widget.text[i];
-
-      final groupLen =
-          (entry.furigana.isNotEmpty && entry.furiganaGroupLength > 1)
-          ? entry.furiganaGroupLength
-          : 1;
-      final end = (i + groupLen).clamp(0, widget.text.length);
-
-      final words = [for (int j = i; j < end; j++) build(j, widget.text[j])];
-
-      final wordWidget = words.length == 1
-          ? words.first
-          : Flex(
-              direction: widget.displayMode,
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: vertical
-                  ? CrossAxisAlignment.start
-                  : CrossAxisAlignment.end,
-              children: words,
-            );
-
-      final furiganaContent = vertical
-          ? Flex(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: .center,
-              crossAxisAlignment: vertical ? .start : .end,
-              direction: vertical ? .vertical : .horizontal,
-              children: [
-                for (final char in entry.furigana.split(''))
-                  Text(char, style: furiganaStyle),
-              ],
-            )
-          : Text(
-              entry.furigana,
-              style: furiganaStyle,
-              textAlign: TextAlign.center,
-            );
-
-      lineChildren.add(
-        entry.furigana.isEmpty || !widget.showFurigana
-            ? wordWidget
-            : Flex(
-                direction: vertical ? .horizontal : .vertical,
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: vertical ? .start : .end,
-                crossAxisAlignment: .center,
-                children: [
-                  if (!vertical) furiganaContent,
-                  wordWidget,
-                  if (vertical) furiganaContent,
-                ],
-              ),
-      );
-
-      i = end;
-    }
-
-    return Flex(
-      direction: widget.displayMode,
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: vertical
-          ? CrossAxisAlignment.start
-          : CrossAxisAlignment.end,
-      mainAxisSize: MainAxisSize.min,
-      children: lineChildren,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      controller: _scrollController,
-      scrollDirection: widget.displayMode,
-      clipBehavior: Clip.none,
-      child: SignalBuilder(
-        builder: (context) {
-          final currWordIndex = widget.ctrl.currentWordIndex.value;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToIndex(currWordIndex);
-          });
-
-          // 调用 _buildFuriganaLine，传入构建单字的闭包
-          return _buildFuriganaLine((wordIndex, wordEntry) {
-            final word = wordEntry.lyricWord;
-            final double scale = wordEntry.duration >= 1.0 ? 3 : 2;
-            final isCurrent = wordIndex == currWordIndex;
-
-            Widget child;
-            if (isCurrent) {
-              child = SignalBuilder(
-                builder: (context) {
-                  final p = widget.ctrl.wordProgress.value;
-                  return _HighlightedWord(
-                    text: word,
-                    furigana: '',
-                    progress: p,
-                    underStyle: widget.underStyle,
-                    overlayStyle: widget.overlayStyle,
-                    strutStyle: widget.strutStyle,
-                    scale: scale,
-                    begin: widget.begin,
-                    end: widget.end,
-                    displayMode: widget.displayMode,
-                    useStroke: widget.ctrl.useStroke.value,
-                    strokeColor: widget.ctrl.strokeColor.value,
-                    showFurigana: false,
-                  );
-                },
-              );
-            } else if (wordIndex < currWordIndex) {
-              child = TextDisplayWidget(
-                text: word,
-                showFurigana: false,
-                furigana: '',
-                style: widget.overlayStyle.copyWith(
-                  color: widget.overlayStyle.color,
-                ),
-                strutStyle: widget.strutStyle,
-                displayMode: widget.displayMode,
-                useStroke: widget.ctrl.useStroke.value,
-                strokeColor: widget.ctrl.strokeColor.value,
-              );
-            } else {
-              child = TextDisplayWidget(
-                text: word,
-                showFurigana: false,
-                furigana: '',
-                style: widget.underStyle,
-                strutStyle: widget.strutStyle,
-                displayMode: widget.displayMode,
-                useStroke: widget.ctrl.useStroke.value,
-                strokeColor: widget.ctrl.strokeColor.value,
-              );
-            }
-
-            return RepaintBoundary(key: _wordKeys[wordIndex], child: child);
-          });
-        },
-      ),
-    );
-  }
-}
-
-class _TranslateWidget extends StatefulWidget {
-  final List<String> text;
-  final DesktopLyricsController ctrl;
+  final List<WordEntry> words;
   final TextStyle underStyle;
+  final TextStyle overlayStyle;
   final StrutStyle? strutStyle;
   final Axis displayMode;
-
-  const _TranslateWidget({
-    required this.text,
-    required this.ctrl,
-    required this.underStyle,
-    required this.strutStyle,
-    required this.displayMode,
-  });
+  final Alignment begin;
+  final Alignment end;
 
   @override
-  State<StatefulWidget> createState() => _TranslateWidgetState();
+  State<_KaraokeLine> createState() => _KaraokeLineState();
 }
 
-class _TranslateWidgetState extends State<_TranslateWidget> {
-  final ScrollController _scrollController = ScrollController();
-  final List<GlobalKey> _wordKeys = [];
+class _KaraokeLineState extends State<_KaraokeLine> {
+  final _scrollController = ScrollController();
+  List<GlobalKey> _wordKeys = const [];
+  late final EffectCleanup _disposeScrollEffect;
 
   @override
   void initState() {
     super.initState();
-    _ensureKeys();
+    _wordKeys = _makeKeys(widget.words.length);
+    _disposeScrollEffect = effect(() {
+      final index = _desktopLyricsController.currentWordIndex.value;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _ensureIndexVisible(_wordKeys, index, alignment: 0.4);
+      });
+    });
   }
 
   @override
-  void didUpdateWidget(covariant _TranslateWidget oldWidget) {
+  void didUpdateWidget(_KaraokeLine oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.text.length != widget.text.length) {
-      _ensureKeys();
-    }
-  }
-
-  void _ensureKeys() {
-    // 保证每个字都有一个 GlobalKey（尽量复用已有 key）
-    if (_wordKeys.length != widget.text.length) {
-      _wordKeys
-        ..clear()
-        ..addAll(List.generate(widget.text.length, (_) => GlobalKey()));
+    if (oldWidget.words.length != widget.words.length) {
+      _wordKeys = _makeKeys(widget.words.length);
     }
   }
 
   @override
   void dispose() {
+    _disposeScrollEffect();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  // 将目标字滚到可见（居中 alignment 可调整）
-  Future<void> _scrollToIndex(int index) async {
-    if (index < 0 || index >= _wordKeys.length) return;
-    final ctx = _wordKeys[index].currentContext;
-    if (ctx == null) return;
-    await Scrollable.ensureVisible(
-      ctx,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.linear,
-      alignment: 0.2,
-    );
   }
 
   @override
@@ -479,37 +218,47 @@ class _TranslateWidgetState extends State<_TranslateWidget> {
       clipBehavior: Clip.none,
       child: SignalBuilder(
         builder: (context) {
-          final currWordIndex = widget.ctrl.currentWordIndex.value;
-          // 确保布局已完成
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToIndex(currWordIndex);
-          });
+          final ctrl = _desktopLyricsController;
+          final currentIndex = ctrl.currentWordIndex.value;
+          final useStroke = ctrl.useStroke.value;
+          final strokeColor = ctrl.strokeColor.value;
 
-          // 构造每个字的 Widget
-          return Flex(
+          return FuriganaLine(
+            words: widget.words,
             direction: widget.displayMode,
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: widget.displayMode == Axis.vertical
-                ? .start
-                : .end,
-            children: widget.text.asMap().entries.map((entry) {
-              final wordIndex = entry.key;
-              final word = entry.value;
-
-              Widget child = TextDisplayWidget(
-                text: word,
-                showFurigana: false,
-                furigana: '',
-                style: widget.underStyle,
-                strutStyle: widget.strutStyle,
-                displayMode: widget.displayMode,
-                useStroke: widget.ctrl.useStroke.value,
-                strokeColor: widget.ctrl.strokeColor.value,
-              );
-
-              // 用 RepaintBoundary 降低局部重绘开销
-              return RepaintBoundary(key: _wordKeys[wordIndex], child: child);
-            }).toList(),
+            showFurigana: ctrl.showKana.value,
+            furiganaStyle: furiganaTextStyle(
+              widget.underStyle,
+              useStroke: useStroke,
+              strokeColor: strokeColor,
+            ),
+            buildWord: (index, word) => RepaintBoundary(
+              key: _wordKeys[index],
+              child: index == currentIndex
+                  ? _HighlightedWord(
+                      text: word.lyricWord,
+                      progress: ctrl.wordProgress,
+                      underStyle: widget.underStyle,
+                      overlayStyle: widget.overlayStyle,
+                      strutStyle: widget.strutStyle,
+                      scale: word.duration >= 1.0 ? 3 : 2,
+                      begin: widget.begin,
+                      end: widget.end,
+                      displayMode: widget.displayMode,
+                      useStroke: useStroke,
+                      strokeColor: strokeColor,
+                    )
+                  : TextDisplayWidget(
+                      text: word.lyricWord,
+                      style: index < currentIndex
+                          ? widget.overlayStyle
+                          : widget.underStyle,
+                      strutStyle: widget.strutStyle,
+                      displayMode: widget.displayMode,
+                      useStroke: useStroke,
+                      strokeColor: strokeColor,
+                    ),
+            ),
           );
         },
       ),
@@ -517,125 +266,181 @@ class _TranslateWidgetState extends State<_TranslateWidget> {
   }
 }
 
+/// 当前行的翻译。逐段渲染只为了能跟着当前字一起滚动 —— 内容本身与进度无关。
+class _TranslateLine extends StatefulWidget {
+  const _TranslateLine({
+    required this.segments,
+    required this.underStyle,
+    required this.displayMode,
+  });
+
+  final List<String> segments;
+  final TextStyle underStyle;
+  final Axis displayMode;
+
+  @override
+  State<_TranslateLine> createState() => _TranslateLineState();
+}
+
+class _TranslateLineState extends State<_TranslateLine> {
+  final _scrollController = ScrollController();
+  List<GlobalKey> _segmentKeys = const [];
+  late final EffectCleanup _disposeScrollEffect;
+
+  @override
+  void initState() {
+    super.initState();
+    _segmentKeys = _makeKeys(widget.segments.length);
+    _disposeScrollEffect = effect(() {
+      final index = _desktopLyricsController.currentWordIndex.value;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _ensureIndexVisible(_segmentKeys, index, alignment: 0.2);
+      });
+    });
+  }
+
+  @override
+  void didUpdateWidget(_TranslateLine oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.segments.length != widget.segments.length) {
+      _segmentKeys = _makeKeys(widget.segments.length);
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposeScrollEffect();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vertical = widget.displayMode == Axis.vertical;
+    return SingleChildScrollView(
+      controller: _scrollController,
+      scrollDirection: widget.displayMode,
+      clipBehavior: Clip.none,
+      child: SignalBuilder(
+        builder: (context) {
+          final ctrl = _desktopLyricsController;
+          final useStroke = ctrl.useStroke.value;
+          final strokeColor = ctrl.strokeColor.value;
+
+          return Flex(
+            direction: widget.displayMode,
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: vertical
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.end,
+            children: [
+              for (var i = 0; i < widget.segments.length; i++)
+                RepaintBoundary(
+                  key: _segmentKeys[i],
+                  child: TextDisplayWidget(
+                    text: widget.segments[i],
+                    style: widget.underStyle,
+                    displayMode: widget.displayMode,
+                    useStroke: useStroke,
+                    strokeColor: strokeColor,
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// 当前行歌词。
 class LyricsRender extends StatelessWidget {
   const LyricsRender({super.key});
-
-  List<String> _splitString(String str, int n) {
-    if (n <= 0) return str.split('');
-
-    return n >= str.length
-        ? str.split('')
-        : [...List.generate(n - 1, (i) => str[i]), str.substring(n - 1)];
-  }
 
   @override
   Widget build(BuildContext context) {
     return SignalBuilder(
       builder: (context) {
-        final fontSize = _desktopLyricsController.fontSize.value;
-        final fontWeight = _desktopLyricsController.fontWeight.value;
-        final displayMode =
-            _desktopLyricsController.useVerticalDisplayMode.value
-            ? Axis.vertical
-            : Axis.horizontal;
-        final begin = _desktopLyricsController.useVerticalDisplayMode.value
-            ? Alignment.topCenter
-            : Alignment.centerLeft;
-        final end = _desktopLyricsController.useVerticalDisplayMode.value
-            ? Alignment.bottomCenter
-            : Alignment.centerRight;
+        final ctrl = _desktopLyricsController;
 
-        final underStyle = generalTextStyle(
-          ctx: context,
+        final line = ctrl.currentLine.value;
+        if (line == null) return const SizedBox.shrink();
+
+        final vertical = ctrl.useVerticalDisplayMode.value;
+        final displayMode = vertical ? Axis.vertical : Axis.horizontal;
+        final fontSize = ctrl.fontSize.value.toDouble();
+        final fontFamily = ctrl.fontFamily.value;
+        final weight =
+            FontWeight.values[ctrl.fontWeight.value.clamp(
+              0,
+              FontWeight.values.length - 1,
+            )];
+
+        final underStyle = lyricTextStyle(
           size: fontSize,
-          color: Color(_desktopLyricsController.underColor.value),
-          weight: FontWeight.values[fontWeight],
+          color: Color(ctrl.underColor.value),
+          weight: weight,
+          fontFamily: fontFamily,
         );
-
-        final overlayStyle = generalTextStyle(
-          ctx: context,
+        final overlayStyle = lyricTextStyle(
           size: fontSize,
-          color: Color(_desktopLyricsController.overlayColor.value),
-          weight: FontWeight.values[fontWeight],
+          color: Color(ctrl.overlayColor.value),
+          weight: weight,
+          fontFamily: fontFamily,
         );
 
-        final strutStyle = StrutStyle(
-          fontSize: fontSize.toDouble(),
-          height: 1,
-          forceStrutHeight: false,
+        final translate = ctrl.currentTranslate.value;
+        final translateLine = _TranslateLine(
+          segments: splitTranslate(translate, line.segmentCount),
+          underStyle: underStyle,
+          displayMode: displayMode,
         );
 
-        return SignalBuilder(
-          builder: (context) {
-            final lrcType = _desktopLyricsController.lrcType.value;
-            final currentLine = _desktopLyricsController.currentLine.value;
-            CrossAxisAlignment lrcAlignment =
-                _lrcCrossAlignment[_desktopLyricsController.lrcAlignment.value];
-
-            if (_desktopLyricsController.lrcAlignment.value == 3 &&
-                _desktopLyricsController.showDoubleLine.value) {
-              if (_lyricsClient.lyricsCounter.value.isEven) {
-                lrcAlignment = _lrcCrossAlignment[0];
-              } else {
-                lrcAlignment = _lrcCrossAlignment[2];
-              }
-            }
-
-            if (currentLine == null) {
-              return const SizedBox.shrink();
-            }
-            final currentTranslate =
-                _desktopLyricsController.currentTranslate.value;
-
-            final tr = _TranslateWidget(
-              text: _splitString(currentTranslate, currentLine.length),
-              underStyle: underStyle,
-              strutStyle: null,
-              ctrl: _desktopLyricsController,
-              displayMode: displayMode,
-            );
-
-            return Opacity(
-              opacity: _desktopLyricsController.fontOpacity.value,
-              child: Flex(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: lrcAlignment, // 切换对齐方式
-                direction: _desktopLyricsController.useVerticalDisplayMode.value
-                    ? Axis.horizontal
-                    : Axis.vertical,
-                children: [
-                  if (_desktopLyricsController.useVerticalDisplayMode.value &&
-                      currentTranslate.isNotEmpty)
-                    tr,
-                  if (lrcType == LyricFormat.lrc)
-                    _LrcLyricWidget(
-                      text: currentLine as String,
-                      overlayStyle: overlayStyle,
-                      displayMode: displayMode,
-                      useStroke: _desktopLyricsController.useStroke.value,
-                      strokeColor: _desktopLyricsController.strokeColor.value,
-                    )
-                  else
-                    _KaraOkLyricWidget(
-                      showFurigana: _desktopLyricsController.showKana.value,
-                      text: currentLine as List<WordEntry>,
-                      underStyle: underStyle,
-                      overlayStyle: overlayStyle,
-                      strutStyle: displayMode == Axis.vertical
-                          ? null
-                          : strutStyle,
-                      ctrl: _desktopLyricsController,
-                      displayMode: displayMode,
-                      begin: begin,
-                      end: end,
-                    ),
-                  if (!_desktopLyricsController.useVerticalDisplayMode.value &&
-                      currentTranslate.isNotEmpty)
-                    tr,
-                ],
-              ),
-            );
-          },
+        return Opacity(
+          opacity: ctrl.fontOpacity.value,
+          child: Flex(
+            direction: vertical ? Axis.horizontal : Axis.vertical,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: ctrl.lrcAlignment.value.resolve(
+              isNextLine: false,
+              showDoubleLine: ctrl.showDoubleLine.value,
+              lineCounter: _lyricsClient.lyricsCounter.value,
+            ),
+            children: [
+              // 竖排时翻译在歌词右侧，横排时在下方
+              if (vertical && translate.isNotEmpty) translateLine,
+              switch (line) {
+                PlainLyricLine(:final text) => TextDisplayWidget(
+                  text: text,
+                  style: overlayStyle,
+                  displayMode: displayMode,
+                  useStroke: ctrl.useStroke.value,
+                  strokeColor: ctrl.strokeColor.value,
+                ),
+                KaraokeLyricLine(:final words) => _KaraokeLine(
+                  words: words,
+                  underStyle: underStyle,
+                  overlayStyle: overlayStyle,
+                  // 竖排时逐字堆叠，strut 的行高会在字间撑出空隙
+                  strutStyle: vertical
+                      ? null
+                      : StrutStyle(
+                          fontSize: fontSize,
+                          height: 1,
+                          forceStrutHeight: false,
+                        ),
+                  displayMode: displayMode,
+                  begin: vertical ? Alignment.topCenter : Alignment.centerLeft,
+                  end: vertical
+                      ? Alignment.bottomCenter
+                      : Alignment.centerRight,
+                ),
+              },
+              if (!vertical && translate.isNotEmpty) translateLine,
+            ],
+          ),
         );
       },
     );
