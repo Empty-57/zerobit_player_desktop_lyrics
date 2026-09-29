@@ -48,6 +48,8 @@ class DesktopLyricsController with WindowListener {
 
   final lyricsSwitchAnimateMode = signal(1); // 0 无动画 1 淡入淡出 2滑动 3 缩放
 
+  final showFurigana=signal(true);
+
   static const double widthIncrement = 12;
   static const double heightIncrement = 2.5;
   static const int fontSizeMin = 16;

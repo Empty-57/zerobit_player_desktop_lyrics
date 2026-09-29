@@ -1,68 +1,93 @@
 import 'package:flutter/material.dart';
 
-/// 抽象出通用的文本展示Widget，避免重复的Flex布局
 class TextDisplayWidget extends StatelessWidget {
-  final String text;
-  final TextStyle style;
-  final StrutStyle? strutStyle;
-  final Axis displayMode;
-  final bool useStroke;
-  final int strokeColor;
-
   const TextDisplayWidget({
     super.key,
     required this.text,
+    required this.furigana,
     required this.style,
     this.strutStyle,
     required this.displayMode,
     required this.useStroke,
     required this.strokeColor,
+    required this.showFurigana,
   });
 
-  bool _isAlphanumeric(String input) {
-    RegExp regExp = RegExp(
-      r'''^[A-Za-z0-9 !"'?.,:;()\[\]\-《》「」（）：/“”]+$''',
-    ); //匹配英文字母、数字和空格以及部分标点
-    return regExp.hasMatch(input);
-  }
+  // 匹配英文字母、数字和空格以及部分标点
+  static final _alphanumericRegExp = RegExp(
+    r'''^[A-Za-z0-9\s!"#$%&'()*+,-./:：;<=>?@[\]^_`{|}~“”‘’《》〈〉「」『』【】〔〕〖〗（）［］｛｝?？!！—―ー～…]+$''',
+  );
 
-  Widget _createText({required String char}) {
-    final style_ = useStroke
+  final String text;
+  final String furigana;
+  final TextStyle style;
+  final StrutStyle? strutStyle;
+  final Axis displayMode;
+  final bool useStroke;
+  final int strokeColor;
+  final bool showFurigana;
+
+  bool _isAlphanumeric(String value) => _alphanumericRegExp.hasMatch(value);
+
+  Text _text(String value, TextStyle style) =>
+      Text(value, style: style, strutStyle: strutStyle);
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = useStroke
         ? style.copyWith(
             shadows: [
               Shadow(
                 color: Color(strokeColor),
-                offset: Offset(-1.2, -1.2),
+                offset: const Offset(-1.2, -1.2),
                 blurRadius: 1.5,
               ),
             ],
           )
         : style;
-    return Text(char, style: style_, strutStyle: strutStyle);
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    // 单字符直接使用 Text，多字符使用 Flex 拆分
+    final vertical = displayMode == Axis.vertical;
 
-    final isAlphanumeric = _isAlphanumeric(text);
-    if ((text.length == 1 && !isAlphanumeric) ||
-        displayMode == Axis.horizontal) {
-      return _createText(char: text);
-    } else {
-      return Flex(
-        direction: displayMode,
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        clipBehavior: Clip.none,
-        children: text.split('').map((char) {
-          if (_isAlphanumeric(char)) {
-            return RotatedBox(quarterTurns: 1, child: _createText(char: char));
-          }
-          return _createText(char: char);
-        }).toList(),
-      );
+    final Widget mainText = !vertical
+        ? _text(text, textStyle)
+        : Flex(
+            direction: Axis.vertical,
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: .center,
+            crossAxisAlignment: .end,
+            children: [
+              for (final char in text.split(''))
+                _isAlphanumeric(char)
+                    ? RotatedBox(quarterTurns: 1, child: _text(char, textStyle))
+                    : _text(char, textStyle),
+            ],
+          );
+
+    if (furigana.isEmpty || !showFurigana) {
+      return mainText;
     }
+
+    final furiganaStyle = textStyle.copyWith(
+      fontSize: (textStyle.fontSize ?? 32) * 0.6,
+      height: 1,
+    );
+
+    final furiFlex = Flex(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: .center,
+      crossAxisAlignment: vertical ? .start : .end,
+      direction: vertical ? .vertical : .horizontal,
+      children: [
+        for (final char in furigana.split('')) _text(char, furiganaStyle),
+      ],
+    );
+
+    return Flex(
+      direction: vertical ? .horizontal : .vertical,
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: vertical ? .start : .end,
+      crossAxisAlignment: .center,
+      children: [if (!vertical) furiFlex, mainText, if (vertical) furiFlex],
+    );
   }
 }

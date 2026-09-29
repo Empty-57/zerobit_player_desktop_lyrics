@@ -21,6 +21,7 @@ const _lrcCrossAlignment = [
 
 class _HighlightedWord extends StatelessWidget {
   final String text;
+  final String furigana;
   final double progress;
   final TextStyle underStyle;
   final TextStyle overlayStyle;
@@ -31,6 +32,7 @@ class _HighlightedWord extends StatelessWidget {
   final Axis displayMode;
   final bool useStroke;
   final int strokeColor;
+  final bool showFurigana;
 
   const _HighlightedWord({
     required this.text,
@@ -44,6 +46,8 @@ class _HighlightedWord extends StatelessWidget {
     required this.displayMode,
     required this.useStroke,
     required this.strokeColor,
+    required this.furigana,
+    required this.showFurigana,
   });
 
   @override
@@ -62,19 +66,24 @@ class _HighlightedWord extends StatelessWidget {
           transform: displayMode == Axis.vertical
               ? _ScaledVerticalTranslateGradientTransform(
                   dy: offset,
-                  scale: scale,
+                  translateGradientScale: scale,
                 )
-              : _ScaledTranslateGradientTransform(dx: offset, scale: scale),
+              : _ScaledTranslateGradientTransform(
+                  dx: offset,
+                  translateGradientScale: scale,
+                ),
         ).createShader(bounds);
       },
       blendMode: BlendMode.srcIn,
       child: TextDisplayWidget(
         text: text,
+        furigana: furigana,
         style: underStyle,
         strutStyle: strutStyle,
         displayMode: displayMode,
         useStroke: false,
         strokeColor: strokeColor,
+        showFurigana: showFurigana,
       ),
     );
 
@@ -84,11 +93,13 @@ class _HighlightedWord extends StatelessWidget {
               // --- 第一层：负责显示阴影 ---
               TextDisplayWidget(
                 text: text,
+                furigana: furigana,
                 style: underStyle.copyWith(color: Colors.transparent),
                 strutStyle: strutStyle,
                 displayMode: displayMode,
                 useStroke: true,
                 strokeColor: strokeColor,
+                showFurigana: showFurigana,
               ),
 
               // --- 第二层：负责显示渐变 (ShaderMask) ---
@@ -101,49 +112,30 @@ class _HighlightedWord extends StatelessWidget {
 
 class _ScaledTranslateGradientTransform extends GradientTransform {
   final double dx;
-  final double scale;
+  final double translateGradientScale;
   const _ScaledTranslateGradientTransform({
     required this.dx,
-    required this.scale,
+    required this.translateGradientScale,
   });
+
   @override
-  Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
-    final matrix = Matrix4.zero();
-    final storage = matrix.storage;
-
-    // xyz缩放
-    storage[0] = scale; // x
-    storage[5] = 1.0; // y
-    storage[10] = 1.0; // z
-    storage[15] = 1.0; // w
-
-    // x平移
-    storage[12] = scale * dx;
-    return matrix;
+  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) {
+    return Matrix4.diagonal3Values(translateGradientScale, 1, 1)
+      ..setTranslationRaw(translateGradientScale * dx, 0, 0);
   }
 }
 
 class _ScaledVerticalTranslateGradientTransform extends GradientTransform {
   final double dy;
-  final double scale;
+  final double translateGradientScale;
   const _ScaledVerticalTranslateGradientTransform({
     required this.dy,
-    required this.scale,
+    required this.translateGradientScale,
   });
   @override
   Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
-    final matrix = Matrix4.zero();
-    final storage = matrix.storage;
-
-    // xyz缩放
-    storage[0] = 1.0; // x
-    storage[5] = scale; // y
-    storage[10] = 1.0; // z
-    storage[15] = 1.0; // w
-
-    // y平移
-    storage[13] = scale * dy;
-    return matrix;
+    return Matrix4.diagonal3Values(1, translateGradientScale, 1)
+      ..setTranslationRaw(0, translateGradientScale * dy, 0);
   }
 }
 
@@ -166,6 +158,8 @@ class _LrcLyricWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextDisplayWidget(
       text: text,
+      showFurigana: false,
+      furigana: '',
       style: overlayStyle,
       displayMode: displayMode,
       strutStyle: null,
@@ -184,6 +178,7 @@ class _KaraOkLyricWidget extends StatefulWidget {
   final Axis displayMode;
   final Alignment begin;
   final Alignment end;
+  final bool showFurigana;
 
   const _KaraOkLyricWidget({
     required this.text,
@@ -194,6 +189,7 @@ class _KaraOkLyricWidget extends StatefulWidget {
     required this.displayMode,
     required this.begin,
     required this.end,
+    required this.showFurigana,
   });
 
   @override
@@ -264,7 +260,7 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
           return Flex(
             direction: widget.displayMode,
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: widget.displayMode==Axis.vertical? .start: .end,
             mainAxisSize: MainAxisSize.min,
             children: widget.text.asMap().entries.map((entry) {
               final wordIndex = entry.key;
@@ -280,6 +276,7 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
                     final p = widget.ctrl.wordProgress.value;
                     return _HighlightedWord(
                       text: word,
+                      furigana: wordEntry.furigana,
                       progress: p,
                       underStyle: widget.underStyle,
                       overlayStyle: widget.overlayStyle,
@@ -290,12 +287,15 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
                       displayMode: widget.displayMode,
                       useStroke: widget.ctrl.useStroke.value,
                       strokeColor: widget.ctrl.strokeColor.value,
+                      showFurigana: widget.showFurigana,
                     );
                   },
                 );
               } else if (wordIndex < currWordIndex) {
                 child = TextDisplayWidget(
                   text: word,
+                  showFurigana: widget.showFurigana,
+                  furigana: wordEntry.furigana,
                   style: widget.overlayStyle.copyWith(
                     color: widget.overlayStyle.color,
                   ),
@@ -307,6 +307,8 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
               } else {
                 child = TextDisplayWidget(
                   text: word,
+                  showFurigana: widget.showFurigana,
+                  furigana: wordEntry.furigana,
                   style: widget.underStyle,
                   strutStyle: widget.strutStyle,
                   displayMode: widget.displayMode,
@@ -408,13 +410,15 @@ class _TranslateWidgetState extends State<_TranslateWidget> {
           return Flex(
             direction: widget.displayMode,
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: widget.displayMode==Axis.vertical? .start: .end,
             children: widget.text.asMap().entries.map((entry) {
               final wordIndex = entry.key;
               final word = entry.value;
 
               Widget child = TextDisplayWidget(
                 text: word,
+                showFurigana: false,
+                furigana: '',
                 style: widget.underStyle,
                 strutStyle: widget.strutStyle,
                 displayMode: widget.displayMode,
@@ -476,7 +480,8 @@ class LyricsRender extends StatelessWidget {
 
         final strutStyle = StrutStyle(
           fontSize: fontSize.toDouble(),
-          forceStrutHeight: true,
+          height: 1,
+          forceStrutHeight: false,
         );
 
         return SignalBuilder(
@@ -501,6 +506,14 @@ class LyricsRender extends StatelessWidget {
             final currentTranslate =
                 _desktopLyricsController.currentTranslate.value;
 
+            final tr = _TranslateWidget(
+              text: _splitString(currentTranslate, currentLine.length),
+              underStyle: underStyle,
+              strutStyle: null,
+              ctrl: _desktopLyricsController,
+              displayMode: displayMode,
+            );
+
             return Opacity(
               opacity: _desktopLyricsController.fontOpacity.value,
               child: Flex(
@@ -510,6 +523,9 @@ class LyricsRender extends StatelessWidget {
                     ? Axis.horizontal
                     : Axis.vertical,
                 children: [
+                  if (_desktopLyricsController.useVerticalDisplayMode.value &&
+                      currentTranslate.isNotEmpty)
+                    tr,
                   if (lrcType == LyricFormat.lrc)
                     _LrcLyricWidget(
                       text: currentLine as String,
@@ -520,6 +536,7 @@ class LyricsRender extends StatelessWidget {
                     )
                   else
                     _KaraOkLyricWidget(
+                      showFurigana: _desktopLyricsController.showFurigana.value,
                       text: currentLine as List<WordEntry>,
                       underStyle: underStyle,
                       overlayStyle: overlayStyle,
@@ -531,14 +548,9 @@ class LyricsRender extends StatelessWidget {
                       begin: begin,
                       end: end,
                     ),
-                  if (currentTranslate.isNotEmpty)
-                    _TranslateWidget(
-                      text: _splitString(currentTranslate, currentLine.length),
-                      underStyle: underStyle,
-                      strutStyle: null,
-                      ctrl: _desktopLyricsController,
-                      displayMode: displayMode,
-                    ),
+                  if (!_desktopLyricsController.useVerticalDisplayMode.value &&
+                      currentTranslate.isNotEmpty)
+                    tr,
                 ],
               ),
             );

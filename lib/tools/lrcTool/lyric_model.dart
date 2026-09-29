@@ -24,14 +24,16 @@ class LyricEntry<T> implements TimedEntry {
 class WordEntry implements TimedEntry {
   @override
   final double start;
-  final double duration;
-  final String lyricWord;
+  double duration;
+  String lyricWord;
+  String furigana;
   @override
   double nextTime;
   WordEntry({
     required this.start,
     required this.duration,
     required this.lyricWord,
+    required this.furigana,
     this.nextTime = double.infinity,
   });
 }

@@ -21,6 +21,28 @@ abstract class _SeverMessageType {
   static const cmd = 'cmd';
 }
 
+abstract class DesktopSharedPreferencesKey {
+  static const fontSize = 'desk_fontSize';
+  static const fontWeight = 'desk_fontWeight';
+  static const fontFamily = 'desk_fontFamily';
+  static const overlayColor = 'desk_overlayColor';
+  static const underColor = 'desk_underColor';
+  static const fontOpacity = 'desk_fontOpacity';
+  static const dx = 'desk_dx';
+  static const dy = 'desk_dy';
+  static const windowWidth = 'desk_windowWidth';
+  static const windowHeight = 'desk_windowHeight';
+  static const isIgnoreMouseEvents = 'desk_isIgnoreMouseEvents';
+  static const lrcAlignment = 'desk_lrcAlignment';
+  static const displayMode = 'desk_displayMode';
+  static const useStroke = 'desk_useStroke';
+  static const strokeColor = 'desk_strokeColor';
+  static const showDoubleLine = 'desk_showDoubleLine';
+  static const useDynamicOverlayColor = 'desk_useDynamicOverlayColor';
+  static const lyricsSwitchAnimateMode = 'desk_lyricsSwitchAnimateMode';
+  static const showFurigana = 'desk_showFurigana';
+}
+
 abstract class _SeverCmdType {
   static const shutdown = 'shutdown';
   static const changeStatus = 'changeStatus';
@@ -38,7 +60,8 @@ abstract class _SeverCmdType {
   static const setStrokeColor = 'setStrokeColor';
   static const heartBeat = 'heartBeat';
   static const showDoubleLine = 'showDoubleLine';
-  static const lyricsSwitchAnimateMode = 'lyricsSwitchAnimateMode';
+  static const setLyricsSwitchAnimateMode = 'setLyricsSwitchAnimateMode';
+  static const setShowFurigana = 'setShowFurigana';
 }
 
 abstract class ClientCmdType {
@@ -205,40 +228,59 @@ class DesktopLyricsClient {
       case _SeverCmdType.showDoubleLine:
         _desktopLyricsController.showDoubleLine.value = cmdData;
         return;
-      case _SeverCmdType.lyricsSwitchAnimateMode:
+      case _SeverCmdType.setLyricsSwitchAnimateMode:
         _desktopLyricsController.lyricsSwitchAnimateMode.value = cmdData;
+        return;
+      case _SeverCmdType.setShowFurigana:
+        _desktopLyricsController.showFurigana.value = cmdData;
         return;
       case _SeverCmdType.heartBeat:
         return _heartbeatTimeoutTimer?.cancel();
       case _SeverCmdType.putConfig:
-        _desktopLyricsController.fontFamily.value = cmdData['fontFamily'];
-        _desktopLyricsController.fontSize.value = cmdData['fontSize'];
-        _desktopLyricsController.fontWeight.value = cmdData['fontWeight'];
-        _desktopLyricsController.overlayColor.value = cmdData['overlayColor'];
-        _desktopLyricsController.underColor.value = cmdData['underColor'];
-        _desktopLyricsController.fontOpacity.value = cmdData['fontOpacity'];
+        _desktopLyricsController.fontFamily.value =
+            cmdData[DesktopSharedPreferencesKey.fontFamily];
+        _desktopLyricsController.fontSize.value =
+            cmdData[DesktopSharedPreferencesKey.fontSize];
+        _desktopLyricsController.fontWeight.value =
+            cmdData[DesktopSharedPreferencesKey.fontWeight];
+        _desktopLyricsController.overlayColor.value =
+            cmdData[DesktopSharedPreferencesKey.overlayColor];
+        _desktopLyricsController.underColor.value =
+            cmdData[DesktopSharedPreferencesKey.underColor];
+        _desktopLyricsController.fontOpacity.value =
+            cmdData[DesktopSharedPreferencesKey.fontOpacity];
         await windowManager.setPosition(
-          Offset(cmdData['dx'] ?? 50.0, cmdData['dy'] ?? 50.0),
+          Offset(
+            cmdData[DesktopSharedPreferencesKey.dx] ?? 50.0,
+            cmdData[DesktopSharedPreferencesKey.dy] ?? 50.0,
+          ),
         );
         _desktopLyricsController.isIgnoreMouseEvents.value =
-            cmdData['isIgnoreMouseEvents'] ?? false;
+            cmdData[DesktopSharedPreferencesKey.isIgnoreMouseEvents] ?? false;
         await windowManager.setIgnoreMouseEvents(
           _desktopLyricsController.isIgnoreMouseEvents.value,
           forward: false,
         );
-        _desktopLyricsController.lrcAlignment.value = cmdData['lrcAlignment'];
+        _desktopLyricsController.lrcAlignment.value =
+            cmdData[DesktopSharedPreferencesKey.lrcAlignment];
         _desktopLyricsController.useVerticalDisplayMode.value =
-            cmdData['displayMode'];
-        _desktopLyricsController.useStroke.value = cmdData['useStroke'];
-        _desktopLyricsController.strokeColor.value = cmdData['strokeColor'];
+            cmdData[DesktopSharedPreferencesKey.displayMode];
+        _desktopLyricsController.useStroke.value =
+            cmdData[DesktopSharedPreferencesKey.useStroke];
+        _desktopLyricsController.strokeColor.value =
+            cmdData[DesktopSharedPreferencesKey.strokeColor];
         await _desktopLyricsController.calcSize(
-          cmdData['windowWidth'] ?? DesktopLyricsController.windowWidthMin,
-          cmdData['windowHeight'] ?? DesktopLyricsController.windowHeightMin,
+          cmdData[DesktopSharedPreferencesKey.windowWidth] ??
+              DesktopLyricsController.windowWidthMin,
+          cmdData[DesktopSharedPreferencesKey.windowHeight] ??
+              DesktopLyricsController.windowHeightMin,
         );
         _desktopLyricsController.showDoubleLine.value =
-            cmdData['showDoubleLine'];
+            cmdData[DesktopSharedPreferencesKey.showDoubleLine];
         _desktopLyricsController.lyricsSwitchAnimateMode.value =
-            cmdData['lyricsSwitchAnimateMode'];
+            cmdData[DesktopSharedPreferencesKey.lyricsSwitchAnimateMode];
+        _desktopLyricsController.showFurigana.value =
+            cmdData[DesktopSharedPreferencesKey.showFurigana];
         return;
     }
   }
@@ -257,12 +299,18 @@ class DesktopLyricsClient {
     if (lrcType != '.lrc' && rawLyrics is List) {
       parsedLine = rawLyrics.map((v) {
         if (v == null) {
-          return WordEntry(start: 0.0, duration: 0.0, lyricWord: '');
+          return WordEntry(
+            start: 0.0,
+            duration: 0.0,
+            lyricWord: '',
+            furigana: '',
+          );
         }
         return WordEntry(
           start: (v['start'] as num?)?.toDouble() ?? 0.0,
           duration: (v['duration'] as num?)?.toDouble() ?? 0.0,
           lyricWord: v['lyricWord']?.toString() ?? '',
+          furigana: v['furigana']?.toString() ?? '',
         );
       }).toList();
     } else {
@@ -287,12 +335,18 @@ class DesktopLyricsClient {
     if (lrcType != '.lrc' && rawLyrics is List) {
       parsedLine = rawLyrics.map((v) {
         if (v == null) {
-          return WordEntry(start: 0.0, duration: 0.0, lyricWord: '');
+          return WordEntry(
+            start: 0.0,
+            duration: 0.0,
+            lyricWord: '',
+            furigana: '',
+          );
         }
         return WordEntry(
           start: (v['start'] as num?)?.toDouble() ?? 0.0,
           duration: (v['duration'] as num?)?.toDouble() ?? 0.0,
           lyricWord: v['lyricWord']?.toString() ?? '',
+          furigana: v['furigana']?.toString() ?? '',
         );
       }).toList();
     } else {

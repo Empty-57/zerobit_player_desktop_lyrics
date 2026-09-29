@@ -38,6 +38,8 @@ class _LrcLyricWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextDisplayWidget(
       text: text,
+      showFurigana: false,
+      furigana: '',
       style: overlayStyle,
       displayMode: displayMode,
       strutStyle: null,
@@ -55,6 +57,7 @@ class _KaraOkLyricWidget extends StatefulWidget {
   final Axis displayMode;
   final Alignment begin;
   final Alignment end;
+  final bool showFurigana;
 
   const _KaraOkLyricWidget({
     required this.text,
@@ -64,6 +67,7 @@ class _KaraOkLyricWidget extends StatefulWidget {
     required this.displayMode,
     required this.begin,
     required this.end,
+    required this.showFurigana,
   });
 
   @override
@@ -81,7 +85,7 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
           return Flex(
             direction: widget.displayMode,
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: widget.displayMode==Axis.vertical? .start: .end,
             mainAxisSize: MainAxisSize.min,
             children: widget.text.asMap().entries.map((entry) {
               final wordEntry = entry.value;
@@ -89,6 +93,8 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
 
               return TextDisplayWidget(
                 text: word,
+                showFurigana: widget.showFurigana,
+                furigana: wordEntry.furigana,
                 style: widget.underStyle,
                 strutStyle: widget.strutStyle,
                 displayMode: widget.displayMode,
@@ -128,7 +134,8 @@ class LyricsNextRender extends StatelessWidget {
 
         final strutStyle = StrutStyle(
           fontSize: fontSize.toDouble(),
-          forceStrutHeight: true,
+          forceStrutHeight: false,
+          height: 1,
         );
 
         final lrcType = _desktopLyricsController.lrcType.value;
@@ -150,7 +157,13 @@ class LyricsNextRender extends StatelessWidget {
         }
 
         final currentTranslate = _desktopLyricsController.nextTranslate.value;
-
+        final tr = _LrcLyricWidget(
+          text: currentTranslate,
+          overlayStyle: underStyle,
+          displayMode: displayMode,
+          useStroke: _desktopLyricsController.useStroke.value,
+          strokeColor: _desktopLyricsController.strokeColor.value,
+        );
         return Opacity(
           opacity: _desktopLyricsController.fontOpacity.value,
           child: Flex(
@@ -158,6 +171,7 @@ class LyricsNextRender extends StatelessWidget {
             crossAxisAlignment: lrcAlignment,
             direction: isVertical ? Axis.horizontal : Axis.vertical,
             children: [
+              if (isVertical && currentTranslate.isNotEmpty) tr,
               if (lrcType == LyricFormat.lrc)
                 _LrcLyricWidget(
                   text: currentLine is String ? currentLine : '',
@@ -170,22 +184,23 @@ class LyricsNextRender extends StatelessWidget {
                 _KaraOkLyricWidget(
                   text: currentLine is List<WordEntry>
                       ? currentLine
-                      : [WordEntry(start: 0.0, duration: 0.0, lyricWord: '')],
+                      : [
+                          WordEntry(
+                            start: 0.0,
+                            duration: 0.0,
+                            lyricWord: '',
+                            furigana: '',
+                          ),
+                        ],
                   underStyle: underStyle,
+                  showFurigana: _desktopLyricsController.showFurigana.value,
                   strutStyle: displayMode == Axis.vertical ? null : strutStyle,
                   ctrl: _desktopLyricsController,
                   displayMode: displayMode,
                   begin: begin,
                   end: end,
                 ),
-              if (currentTranslate.isNotEmpty)
-                _LrcLyricWidget(
-                  text: currentTranslate,
-                  overlayStyle: underStyle,
-                  displayMode: displayMode,
-                  useStroke: _desktopLyricsController.useStroke.value,
-                  strokeColor: _desktopLyricsController.strokeColor.value,
-                ),
+              if (!isVertical && currentTranslate.isNotEmpty) tr,
             ],
           ),
         );
