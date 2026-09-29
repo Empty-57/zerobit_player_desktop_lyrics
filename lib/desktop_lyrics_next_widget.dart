@@ -75,6 +75,102 @@ class _KaraOkLyricWidget extends StatefulWidget {
 }
 
 class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
+  Widget _buildFuriganaLine(Widget Function(int, WordEntry) build) {
+    final vertical = widget.displayMode == Axis.vertical;
+    final List<Widget> lineChildren = [];
+    int i = 0;
+
+    final furiganaBaseStyle = widget.underStyle.copyWith(
+      fontSize: (widget.underStyle.fontSize ?? 32) * 0.6,
+      height: 1,
+    );
+
+    final furiganaStyle = widget.ctrl.useStroke.value
+        ? furiganaBaseStyle.copyWith(
+            shadows: [
+              Shadow(
+                color: Color(widget.ctrl.strokeColor.value),
+                offset: const Offset(-1.2, -1.2),
+                blurRadius: 1.5,
+              ),
+            ],
+          )
+        : furiganaBaseStyle;
+
+    while (i < widget.text.length) {
+      final entry = widget.text[i];
+
+      final groupLen =
+          (entry.furigana.isNotEmpty && entry.furiganaGroupLength > 1)
+          ? entry.furiganaGroupLength
+          : 1;
+
+      final end = (i + groupLen).clamp(0, widget.text.length);
+
+      final words = [for (int j = i; j < end; j++) build(j, widget.text[j])];
+
+      final wordWidget = words.length == 1
+          ? words.first
+          : Flex(
+              direction: widget.displayMode,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: vertical
+                  ? CrossAxisAlignment.start
+                  : CrossAxisAlignment.end,
+              children: words,
+            );
+
+      final furiganaContent = vertical
+          ? Flex(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: vertical
+                  ? CrossAxisAlignment.start
+                  : CrossAxisAlignment.end,
+              direction: vertical ? Axis.vertical : Axis.horizontal,
+              children: [
+                for (final char in entry.furigana.split(''))
+                  Text(char, style: furiganaStyle),
+              ],
+            )
+          : Text(
+              entry.furigana,
+              style: furiganaStyle,
+              textAlign: TextAlign.center,
+            );
+
+      lineChildren.add(
+        entry.furigana.isEmpty || !widget.showFurigana
+            ? wordWidget
+            : Flex(
+                direction: vertical ? Axis.horizontal : Axis.vertical,
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: vertical
+                    ? MainAxisAlignment.start
+                    : MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (!vertical) furiganaContent,
+                  wordWidget,
+                  if (vertical) furiganaContent,
+                ],
+              ),
+      );
+
+      i = end;
+    }
+
+    return Flex(
+      direction: widget.displayMode,
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: vertical
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: lineChildren,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -82,27 +178,20 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
       clipBehavior: Clip.none,
       child: SignalBuilder(
         builder: (context) {
-          return Flex(
-            direction: widget.displayMode,
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: widget.displayMode==Axis.vertical? .start: .end,
-            mainAxisSize: MainAxisSize.min,
-            children: widget.text.asMap().entries.map((entry) {
-              final wordEntry = entry.value;
-              final word = wordEntry.lyricWord;
+          return _buildFuriganaLine((wordIndex, wordEntry) {
+            final word = wordEntry.lyricWord;
 
-              return TextDisplayWidget(
-                text: word,
-                showFurigana: widget.showFurigana,
-                furigana: wordEntry.furigana,
-                style: widget.underStyle,
-                strutStyle: widget.strutStyle,
-                displayMode: widget.displayMode,
-                useStroke: widget.ctrl.useStroke.value,
-                strokeColor: widget.ctrl.strokeColor.value,
-              );
-            }).toList(),
-          );
+            return TextDisplayWidget(
+              text: word,
+              showFurigana: false,
+              furigana: '',
+              style: widget.underStyle,
+              strutStyle: widget.strutStyle,
+              displayMode: widget.displayMode,
+              useStroke: widget.ctrl.useStroke.value,
+              strokeColor: widget.ctrl.strokeColor.value,
+            );
+          });
         },
       ),
     );
@@ -140,6 +229,7 @@ class LyricsNextRender extends StatelessWidget {
 
         final lrcType = _desktopLyricsController.lrcType.value;
         final currentLine = _desktopLyricsController.nextLine.value;
+
         CrossAxisAlignment lrcAlignment =
             _lrcCrossAlignment[_desktopLyricsController.lrcAlignment.value];
 
@@ -157,6 +247,7 @@ class LyricsNextRender extends StatelessWidget {
         }
 
         final currentTranslate = _desktopLyricsController.nextTranslate.value;
+
         final tr = _LrcLyricWidget(
           text: currentTranslate,
           overlayStyle: underStyle,
@@ -164,6 +255,7 @@ class LyricsNextRender extends StatelessWidget {
           useStroke: _desktopLyricsController.useStroke.value,
           strokeColor: _desktopLyricsController.strokeColor.value,
         );
+
         return Opacity(
           opacity: _desktopLyricsController.fontOpacity.value,
           child: Flex(
@@ -193,12 +285,12 @@ class LyricsNextRender extends StatelessWidget {
                           ),
                         ],
                   underStyle: underStyle,
-                  showFurigana: _desktopLyricsController.showFurigana.value,
                   strutStyle: displayMode == Axis.vertical ? null : strutStyle,
                   ctrl: _desktopLyricsController,
                   displayMode: displayMode,
                   begin: begin,
                   end: end,
+                  showFurigana: _desktopLyricsController.showKana.value,
                 ),
               if (!isVertical && currentTranslate.isNotEmpty) tr,
             ],

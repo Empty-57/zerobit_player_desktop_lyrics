@@ -5,8 +5,8 @@ import 'package:zerobit_player_desktop_lyrics/tools/lrcTool/lyrics_text_display_
 
 import '../tools/general_style.dart';
 import '../tools/lrcTool/lyric_model.dart';
-import 'desktop_lyrics_client.dart';
 import 'controller/desktop_lyrics_ctrl.dart';
+import 'desktop_lyrics_client.dart';
 
 final DesktopLyricsController _desktopLyricsController =
     GetIt.I<DesktopLyricsController>();
@@ -215,7 +215,6 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
   }
 
   void _ensureKeys() {
-    // 保证每个字都有一个 GlobalKey（尽量复用已有 key）
     if (_wordKeys.length != widget.text.length) {
       _wordKeys
         ..clear()
@@ -229,7 +228,6 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
     super.dispose();
   }
 
-  // 将目标字滚到可见（居中 alignment 可调整）
   Future<void> _scrollToIndex(int index) async {
     if (index < 0 || index >= _wordKeys.length) return;
     final ctx = _wordKeys[index].currentContext;
@@ -242,6 +240,97 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
     );
   }
 
+  Widget _buildFuriganaLine(Widget Function(int, WordEntry) build) {
+    final vertical = widget.displayMode == Axis.vertical;
+    final List<Widget> lineChildren = [];
+    int i = 0;
+
+    final furiganaBaseStyle = widget.underStyle.copyWith(
+      fontSize: (widget.underStyle.fontSize ?? 32) * 0.6,
+      height: 1,
+    );
+
+    final furiganaStyle = widget.ctrl.useStroke.value
+        ? furiganaBaseStyle.copyWith(
+            shadows: [
+              Shadow(
+                color: Color(widget.ctrl.strokeColor.value),
+                offset: const Offset(-1.2, -1.2),
+                blurRadius: 1.5,
+              ),
+            ],
+          )
+        : furiganaBaseStyle;
+
+    while (i < widget.text.length) {
+      final entry = widget.text[i];
+
+      final groupLen =
+          (entry.furigana.isNotEmpty && entry.furiganaGroupLength > 1)
+          ? entry.furiganaGroupLength
+          : 1;
+      final end = (i + groupLen).clamp(0, widget.text.length);
+
+      final words = [for (int j = i; j < end; j++) build(j, widget.text[j])];
+
+      final wordWidget = words.length == 1
+          ? words.first
+          : Flex(
+              direction: widget.displayMode,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: vertical
+                  ? CrossAxisAlignment.start
+                  : CrossAxisAlignment.end,
+              children: words,
+            );
+
+      final furiganaContent = vertical
+          ? Flex(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: .center,
+              crossAxisAlignment: vertical ? .start : .end,
+              direction: vertical ? .vertical : .horizontal,
+              children: [
+                for (final char in entry.furigana.split(''))
+                  Text(char, style: furiganaStyle),
+              ],
+            )
+          : Text(
+              entry.furigana,
+              style: furiganaStyle,
+              textAlign: TextAlign.center,
+            );
+
+      lineChildren.add(
+        entry.furigana.isEmpty || !widget.showFurigana
+            ? wordWidget
+            : Flex(
+                direction: vertical ? .horizontal : .vertical,
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: vertical ? .start : .end,
+                crossAxisAlignment: .center,
+                children: [
+                  if (!vertical) furiganaContent,
+                  wordWidget,
+                  if (vertical) furiganaContent,
+                ],
+              ),
+      );
+
+      i = end;
+    }
+
+    return Flex(
+      direction: widget.displayMode,
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: vertical
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: lineChildren,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -251,76 +340,66 @@ class _KaraOkLyricWidgetState extends State<_KaraOkLyricWidget> {
       child: SignalBuilder(
         builder: (context) {
           final currWordIndex = widget.ctrl.currentWordIndex.value;
-          // 确保布局已完成
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _scrollToIndex(currWordIndex);
           });
 
-          // 构造每个字的 Widget
-          return Flex(
-            direction: widget.displayMode,
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: widget.displayMode==Axis.vertical? .start: .end,
-            mainAxisSize: MainAxisSize.min,
-            children: widget.text.asMap().entries.map((entry) {
-              final wordIndex = entry.key;
-              final wordEntry = entry.value;
-              final word = wordEntry.lyricWord;
-              final double scale = wordEntry.duration >= 1.0 ? 3 : 2;
-              final isCurrent = wordIndex == currWordIndex;
+          // 调用 _buildFuriganaLine，传入构建单字的闭包
+          return _buildFuriganaLine((wordIndex, wordEntry) {
+            final word = wordEntry.lyricWord;
+            final double scale = wordEntry.duration >= 1.0 ? 3 : 2;
+            final isCurrent = wordIndex == currWordIndex;
 
-              Widget child;
-              if (isCurrent) {
-                child = SignalBuilder(
-                  builder: (context) {
-                    final p = widget.ctrl.wordProgress.value;
-                    return _HighlightedWord(
-                      text: word,
-                      furigana: wordEntry.furigana,
-                      progress: p,
-                      underStyle: widget.underStyle,
-                      overlayStyle: widget.overlayStyle,
-                      strutStyle: widget.strutStyle,
-                      scale: scale,
-                      begin: widget.begin,
-                      end: widget.end,
-                      displayMode: widget.displayMode,
-                      useStroke: widget.ctrl.useStroke.value,
-                      strokeColor: widget.ctrl.strokeColor.value,
-                      showFurigana: widget.showFurigana,
-                    );
-                  },
-                );
-              } else if (wordIndex < currWordIndex) {
-                child = TextDisplayWidget(
-                  text: word,
-                  showFurigana: widget.showFurigana,
-                  furigana: wordEntry.furigana,
-                  style: widget.overlayStyle.copyWith(
-                    color: widget.overlayStyle.color,
-                  ),
-                  strutStyle: widget.strutStyle,
-                  displayMode: widget.displayMode,
-                  useStroke: widget.ctrl.useStroke.value,
-                  strokeColor: widget.ctrl.strokeColor.value,
-                );
-              } else {
-                child = TextDisplayWidget(
-                  text: word,
-                  showFurigana: widget.showFurigana,
-                  furigana: wordEntry.furigana,
-                  style: widget.underStyle,
-                  strutStyle: widget.strutStyle,
-                  displayMode: widget.displayMode,
-                  useStroke: widget.ctrl.useStroke.value,
-                  strokeColor: widget.ctrl.strokeColor.value,
-                );
-              }
+            Widget child;
+            if (isCurrent) {
+              child = SignalBuilder(
+                builder: (context) {
+                  final p = widget.ctrl.wordProgress.value;
+                  return _HighlightedWord(
+                    text: word,
+                    furigana: '',
+                    progress: p,
+                    underStyle: widget.underStyle,
+                    overlayStyle: widget.overlayStyle,
+                    strutStyle: widget.strutStyle,
+                    scale: scale,
+                    begin: widget.begin,
+                    end: widget.end,
+                    displayMode: widget.displayMode,
+                    useStroke: widget.ctrl.useStroke.value,
+                    strokeColor: widget.ctrl.strokeColor.value,
+                    showFurigana: false,
+                  );
+                },
+              );
+            } else if (wordIndex < currWordIndex) {
+              child = TextDisplayWidget(
+                text: word,
+                showFurigana: false,
+                furigana: '',
+                style: widget.overlayStyle.copyWith(
+                  color: widget.overlayStyle.color,
+                ),
+                strutStyle: widget.strutStyle,
+                displayMode: widget.displayMode,
+                useStroke: widget.ctrl.useStroke.value,
+                strokeColor: widget.ctrl.strokeColor.value,
+              );
+            } else {
+              child = TextDisplayWidget(
+                text: word,
+                showFurigana: false,
+                furigana: '',
+                style: widget.underStyle,
+                strutStyle: widget.strutStyle,
+                displayMode: widget.displayMode,
+                useStroke: widget.ctrl.useStroke.value,
+                strokeColor: widget.ctrl.strokeColor.value,
+              );
+            }
 
-              // 用 RepaintBoundary 降低局部重绘开销
-              return RepaintBoundary(key: _wordKeys[wordIndex], child: child);
-            }).toList(),
-          );
+            return RepaintBoundary(key: _wordKeys[wordIndex], child: child);
+          });
         },
       ),
     );
@@ -410,7 +489,9 @@ class _TranslateWidgetState extends State<_TranslateWidget> {
           return Flex(
             direction: widget.displayMode,
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: widget.displayMode==Axis.vertical? .start: .end,
+            crossAxisAlignment: widget.displayMode == Axis.vertical
+                ? .start
+                : .end,
             children: widget.text.asMap().entries.map((entry) {
               final wordIndex = entry.key;
               final word = entry.value;
@@ -536,7 +617,7 @@ class LyricsRender extends StatelessWidget {
                     )
                   else
                     _KaraOkLyricWidget(
-                      showFurigana: _desktopLyricsController.showFurigana.value,
+                      showFurigana: _desktopLyricsController.showKana.value,
                       text: currentLine as List<WordEntry>,
                       underStyle: underStyle,
                       overlayStyle: overlayStyle,

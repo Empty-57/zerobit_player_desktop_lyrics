@@ -7,10 +7,10 @@ import 'package:signals/signals_flutter.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:zerobit_player_desktop_lyrics/tool_bar.dart';
 
+import 'controller/desktop_lyrics_ctrl.dart';
 import 'desktop_lyrics_client.dart';
 import 'desktop_lyrics_next_widget.dart';
 import 'desktop_lyrics_widget.dart';
-import 'controller/desktop_lyrics_ctrl.dart';
 
 final _isHover = signal(false);
 const _lrcCrossAlignment = [

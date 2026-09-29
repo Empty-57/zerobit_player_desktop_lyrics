@@ -27,6 +27,7 @@ class WordEntry implements TimedEntry {
   double duration;
   String lyricWord;
   String furigana;
+  int furiganaGroupLength;
   @override
   double nextTime;
   WordEntry({
@@ -34,6 +35,7 @@ class WordEntry implements TimedEntry {
     required this.duration,
     required this.lyricWord,
     required this.furigana,
+    this.furiganaGroupLength = 1,
     this.nextTime = double.infinity,
   });
 }

@@ -40,7 +40,7 @@ abstract class DesktopSharedPreferencesKey {
   static const showDoubleLine = 'desk_showDoubleLine';
   static const useDynamicOverlayColor = 'desk_useDynamicOverlayColor';
   static const lyricsSwitchAnimateMode = 'desk_lyricsSwitchAnimateMode';
-  static const showFurigana = 'desk_showFurigana';
+  static const showKana = 'desk_showKana';
 }
 
 abstract class _SeverCmdType {
@@ -61,7 +61,7 @@ abstract class _SeverCmdType {
   static const heartBeat = 'heartBeat';
   static const showDoubleLine = 'showDoubleLine';
   static const setLyricsSwitchAnimateMode = 'setLyricsSwitchAnimateMode';
-  static const setShowFurigana = 'setShowFurigana';
+  static const setShowKana = 'setShowKana';
 }
 
 abstract class ClientCmdType {
@@ -231,8 +231,8 @@ class DesktopLyricsClient {
       case _SeverCmdType.setLyricsSwitchAnimateMode:
         _desktopLyricsController.lyricsSwitchAnimateMode.value = cmdData;
         return;
-      case _SeverCmdType.setShowFurigana:
-        _desktopLyricsController.showFurigana.value = cmdData;
+      case _SeverCmdType.setShowKana:
+        _desktopLyricsController.showKana.value = cmdData;
         return;
       case _SeverCmdType.heartBeat:
         return _heartbeatTimeoutTimer?.cancel();
@@ -279,8 +279,8 @@ class DesktopLyricsClient {
             cmdData[DesktopSharedPreferencesKey.showDoubleLine];
         _desktopLyricsController.lyricsSwitchAnimateMode.value =
             cmdData[DesktopSharedPreferencesKey.lyricsSwitchAnimateMode];
-        _desktopLyricsController.showFurigana.value =
-            cmdData[DesktopSharedPreferencesKey.showFurigana];
+        _desktopLyricsController.showKana.value =
+            cmdData[DesktopSharedPreferencesKey.showKana];
         return;
     }
   }
@@ -311,6 +311,7 @@ class DesktopLyricsClient {
           duration: (v['duration'] as num?)?.toDouble() ?? 0.0,
           lyricWord: v['lyricWord']?.toString() ?? '',
           furigana: v['furigana']?.toString() ?? '',
+          furiganaGroupLength: (v['furiganaGroupLength'] as num?)?.toInt() ?? 1,
         );
       }).toList();
     } else {
@@ -347,6 +348,7 @@ class DesktopLyricsClient {
           duration: (v['duration'] as num?)?.toDouble() ?? 0.0,
           lyricWord: v['lyricWord']?.toString() ?? '',
           furigana: v['furigana']?.toString() ?? '',
+          furiganaGroupLength: (v['furiganaGroupLength'] as num?)?.toInt() ?? 1,
         );
       }).toList();
     } else {
