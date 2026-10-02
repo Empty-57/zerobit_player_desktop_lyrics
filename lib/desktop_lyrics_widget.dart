@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:signals/signals_flutter.dart';
@@ -7,47 +9,17 @@ import 'desktop_lyrics_client.dart';
 import 'tools/lrcTool/furigana_line.dart';
 import 'tools/lrcTool/lyric_model.dart';
 import 'tools/lrcTool/lyrics_text_display_widget.dart';
+import 'tools/lrcTool/progress_shader_mask.dart';
 import 'tools/lyric_text_style.dart';
 
 final DesktopLyricsController _desktopLyricsController =
     GetIt.I<DesktopLyricsController>();
 final DesktopLyricsClient _lyricsClient = GetIt.I<DesktopLyricsClient>();
 
-/// 沿 [axis] 平移渐变并在该方向上缩放，用于把「已唱 / 未唱」的分界推到字的某个位置。
-class _ProgressGradientTransform extends GradientTransform {
-  const _ProgressGradientTransform({
-    required this.axis,
-    required this.offset,
-    required this.scale,
-  });
-
-  final Axis axis;
-  final double offset;
-  final double scale;
-
-  @override
-  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) =>
-      axis == Axis.vertical
-      ? (Matrix4.diagonal3Values(1, scale, 1)
-          ..setTranslationRaw(0, scale * offset, 0))
-      : (Matrix4.diagonal3Values(scale, 1, 1)
-          ..setTranslationRaw(scale * offset, 0, 0));
-
-  /// 值相等时可跳过重建着色器。
-  @override
-  bool operator ==(Object other) =>
-      other is _ProgressGradientTransform &&
-      other.axis == axis &&
-      other.offset == offset &&
-      other.scale == scale;
-
-  @override
-  int get hashCode => Object.hash(axis, offset, scale);
-}
-
-/// 正在演唱的那个字：在底色文本之上用 [ShaderMask] 推进一条「已唱」的渐变。
+/// 正在演唱的那个字：在底色文本之上推进一条「已唱」的渐变。
 class _HighlightedWord extends StatelessWidget {
   const _HighlightedWord({
+    super.key,
     required this.text,
     required this.progress,
     required this.underStyle,
@@ -85,34 +57,16 @@ class _HighlightedWord extends StatelessWidget {
     );
 
     final shaderText = SignalBuilder(
-      builder: (context) {
-        final value = progress.value;
-        return ShaderMask(
-          shaderCallback: (bounds) {
-            const offsetFactor = -0.666;
-            final extent = displayMode == Axis.vertical
-                ? bounds.height
-                : bounds.width;
-            return LinearGradient(
-              begin: begin,
-              end: end,
-              colors: [
-                overlayStyle.color!,
-                overlayStyle.color!,
-                underStyle.color!,
-              ],
-              stops: const [0.0, 0.333, 0.666],
-              transform: _ProgressGradientTransform(
-                axis: displayMode,
-                offset: extent * offsetFactor * (1 - value),
-                scale: scale,
-              ),
-            ).createShader(bounds);
-          },
-          blendMode: BlendMode.srcIn,
-          child: maskedText,
-        );
-      },
+      builder: (context) => ProgressShaderMask(
+        progress: progress.value,
+        axis: displayMode,
+        scale: scale,
+        begin: begin,
+        end: end,
+        overlayColor: overlayStyle.color!,
+        underColor: underStyle.color!,
+        child: maskedText,
+      ),
     );
 
     if (!useStroke) return shaderText;
@@ -154,6 +108,49 @@ Future<void> _ensureIndexVisible(
   );
 }
 
+/// 让当前字始终留在视野内。
+///
+/// 真正滚动时再取用最新的下标。
+mixin _FollowCurrentWord<T extends StatefulWidget> on State<T> {
+  /// 下标对应元素所挂的 key，由使用方在 [initState] 调用 `super.initState()`
+  /// 之前准备好。
+  List<GlobalKey> get followKeys;
+
+  /// 当前字在视口中的落点比例
+  double get followAlignment;
+
+  late final EffectCleanup _disposeFollowEffect;
+  int _pendingIndex = -1;
+  bool _followScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _disposeFollowEffect = effect(() {
+      _pendingIndex = _desktopLyricsController.currentWordIndex.value;
+      if (_followScheduled) return;
+      _followScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _followScheduled = false;
+        if (!mounted) return;
+        unawaited(
+          _ensureIndexVisible(
+            followKeys,
+            _pendingIndex,
+            alignment: followAlignment,
+          ),
+        );
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _disposeFollowEffect();
+    super.dispose();
+  }
+}
+
 class _KaraokeLine extends StatefulWidget {
   const _KaraokeLine({
     required this.words,
@@ -177,22 +174,21 @@ class _KaraokeLine extends StatefulWidget {
   State<_KaraokeLine> createState() => _KaraokeLineState();
 }
 
-class _KaraokeLineState extends State<_KaraokeLine> {
+class _KaraokeLineState extends State<_KaraokeLine>
+    with _FollowCurrentWord<_KaraokeLine> {
   final _scrollController = ScrollController();
   List<GlobalKey> _wordKeys = const [];
-  late final EffectCleanup _disposeScrollEffect;
+
+  @override
+  List<GlobalKey> get followKeys => _wordKeys;
+
+  @override
+  double get followAlignment => 0.4;
 
   @override
   void initState() {
-    super.initState();
     _wordKeys = _makeKeys(widget.words.length);
-    _disposeScrollEffect = effect(() {
-      final index = _desktopLyricsController.currentWordIndex.value;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _ensureIndexVisible(_wordKeys, index, alignment: 0.4);
-      });
-    });
+    super.initState();
   }
 
   @override
@@ -205,7 +201,6 @@ class _KaraokeLineState extends State<_KaraokeLine> {
 
   @override
   void dispose() {
-    _disposeScrollEffect();
     _scrollController.dispose();
     super.dispose();
   }
@@ -232,33 +227,32 @@ class _KaraokeLineState extends State<_KaraokeLine> {
               useStroke: useStroke,
               strokeColor: strokeColor,
             ),
-            buildWord: (index, word) => RepaintBoundary(
-              key: _wordKeys[index],
-              child: index == currentIndex
-                  ? _HighlightedWord(
-                      text: word.lyricWord,
-                      progress: ctrl.wordProgress,
-                      underStyle: widget.underStyle,
-                      overlayStyle: widget.overlayStyle,
-                      strutStyle: widget.strutStyle,
-                      scale: word.duration >= 1.0 ? 3 : 2,
-                      begin: widget.begin,
-                      end: widget.end,
-                      displayMode: widget.displayMode,
-                      useStroke: useStroke,
-                      strokeColor: strokeColor,
-                    )
-                  : TextDisplayWidget(
-                      text: word.lyricWord,
-                      style: index < currentIndex
-                          ? widget.overlayStyle
-                          : widget.underStyle,
-                      strutStyle: widget.strutStyle,
-                      displayMode: widget.displayMode,
-                      useStroke: useStroke,
-                      strokeColor: strokeColor,
-                    ),
-            ),
+            buildWord: (index, word) => index == currentIndex
+                ? _HighlightedWord(
+                    key: _wordKeys[index],
+                    text: word.lyricWord,
+                    progress: ctrl.wordProgress,
+                    underStyle: widget.underStyle,
+                    overlayStyle: widget.overlayStyle,
+                    strutStyle: widget.strutStyle,
+                    scale: word.duration >= 1.0 ? 3 : 2,
+                    begin: widget.begin,
+                    end: widget.end,
+                    displayMode: widget.displayMode,
+                    useStroke: useStroke,
+                    strokeColor: strokeColor,
+                  )
+                : TextDisplayWidget(
+                    key: _wordKeys[index],
+                    text: word.lyricWord,
+                    style: index < currentIndex
+                        ? widget.overlayStyle
+                        : widget.underStyle,
+                    strutStyle: widget.strutStyle,
+                    displayMode: widget.displayMode,
+                    useStroke: useStroke,
+                    strokeColor: strokeColor,
+                  ),
           );
         },
       ),
@@ -282,22 +276,21 @@ class _TranslateLine extends StatefulWidget {
   State<_TranslateLine> createState() => _TranslateLineState();
 }
 
-class _TranslateLineState extends State<_TranslateLine> {
+class _TranslateLineState extends State<_TranslateLine>
+    with _FollowCurrentWord<_TranslateLine> {
   final _scrollController = ScrollController();
   List<GlobalKey> _segmentKeys = const [];
-  late final EffectCleanup _disposeScrollEffect;
+
+  @override
+  List<GlobalKey> get followKeys => _segmentKeys;
+
+  @override
+  double get followAlignment => 0.2;
 
   @override
   void initState() {
-    super.initState();
     _segmentKeys = _makeKeys(widget.segments.length);
-    _disposeScrollEffect = effect(() {
-      final index = _desktopLyricsController.currentWordIndex.value;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _ensureIndexVisible(_segmentKeys, index, alignment: 0.2);
-      });
-    });
+    super.initState();
   }
 
   @override
@@ -310,7 +303,6 @@ class _TranslateLineState extends State<_TranslateLine> {
 
   @override
   void dispose() {
-    _disposeScrollEffect();
     _scrollController.dispose();
     super.dispose();
   }
@@ -337,15 +329,13 @@ class _TranslateLineState extends State<_TranslateLine> {
                 : CrossAxisAlignment.end,
             children: [
               for (var i = 0; i < widget.segments.length; i++)
-                RepaintBoundary(
+                TextDisplayWidget(
                   key: _segmentKeys[i],
-                  child: TextDisplayWidget(
-                    text: widget.segments[i],
-                    style: widget.underStyle,
-                    displayMode: widget.displayMode,
-                    useStroke: useStroke,
-                    strokeColor: strokeColor,
-                  ),
+                  text: widget.segments[i],
+                  style: widget.underStyle,
+                  displayMode: widget.displayMode,
+                  useStroke: useStroke,
+                  strokeColor: strokeColor,
                 ),
             ],
           );

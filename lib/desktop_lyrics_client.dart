@@ -99,7 +99,9 @@ class DesktopLyricsClient {
 
   final _heartbeatInterval = const Duration(seconds: 10);
   final _heartbeatTimeout = const Duration(seconds: 5);
-  final _alwaysOnTopTimeInterval = const Duration(seconds: 1);
+
+  /// 重申置顶的间隔。调小会按比例抬高内存涨幅
+  static const _alwaysOnTopTimeInterval = Duration(seconds: 10);
   final _reconnectDelay = const Duration(seconds: 2);
 
   static const _maxReconnectAttempts = 15;
@@ -159,12 +161,13 @@ class DesktopLyricsClient {
     });
   }
 
-  /// 歌词窗口需要始终压在其它窗口之上，定期重申一次置顶。
+  /// 歌词窗口要一直压在其它窗口之上，重申间隔不能太小
   void _startAlwaysOnTop() {
     _alwaysOnTopTimer?.cancel();
-    _alwaysOnTopTimer = Timer.periodic(_alwaysOnTopTimeInterval, (_) async {
-      await windowManager.setAlwaysOnTop(true);
-    });
+    _alwaysOnTopTimer = Timer.periodic(
+      _alwaysOnTopTimeInterval,
+      (_) => unawaited(windowManager.setAlwaysOnTop(true)),
+    );
   }
 
   void _startHeartbeat() {

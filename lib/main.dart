@@ -78,6 +78,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        scrollbars: false,
+      ),
       home: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onPanStart: (_) {
