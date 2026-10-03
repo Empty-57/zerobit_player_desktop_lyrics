@@ -40,6 +40,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
 
+  PaintingBinding.instance.imageCache.maximumSize = 50;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 5 * 1024 * 1024;
+
   GetIt.I.registerSingleton<DesktopLyricsController>(
     DesktopLyricsController(),
     dispose: (controller) => controller.dispose(),
