@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' show Offset;
 
-import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:signals/signals_core.dart';
 import 'package:web_socket_channel/io.dart';
@@ -126,8 +125,7 @@ class DesktopLyricsClient {
 
     try {
       await channel.ready;
-    } catch (e) {
-      debugPrint('connect failed: $e');
+    } catch (_) {
       _scheduleReconnect();
       return;
     }
@@ -136,12 +134,7 @@ class DesktopLyricsClient {
     _reconnectCounter = 0;
 
     _add('ok');
-    _listen = channel.stream.listen(
-      _messageHandle,
-      // 断线不自动重连：交给心跳超时关闭窗口，
-      onError: (Object e) => debugPrint('socket error: $e'),
-      onDone: () => debugPrint('socket closed: ${channel.closeCode}'),
-    );
+    _listen = channel.stream.listen(_messageHandle);
 
     _startHeartbeat();
     _startAlwaysOnTop();
@@ -152,11 +145,9 @@ class DesktopLyricsClient {
     _reconnectTimer = Timer(_reconnectDelay, () async {
       _reconnectCounter++;
       if (_reconnectCounter > _maxReconnectAttempts) {
-        debugPrint('Reconnect failed!');
         await windowManager.close();
         return;
       }
-      debugPrint('reconnect on $_reconnectCounter');
       await connect();
     });
   }
@@ -183,7 +174,6 @@ class DesktopLyricsClient {
   void _startHeartbeatTimeout() {
     _heartbeatTimeoutTimer?.cancel();
     _heartbeatTimeoutTimer = Timer(_heartbeatTimeout, () async {
-      debugPrint('heartbeat timeout');
       await windowManager.close();
     });
   }
@@ -201,9 +191,7 @@ class DesktopLyricsClient {
         case _ServerMessageType.nextData:
           _lyricLineHandle(data, isNextLine: true);
       }
-    } catch (e) {
-      debugPrint('message handle failed: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> _cmdHandle(Map<String, dynamic> data) async {
@@ -262,7 +250,6 @@ class DesktopLyricsClient {
   /// 应用播放器保存的整套配置。
   Future<void> _putConfig(Object? raw) async {
     if (raw is! Map) {
-      debugPrint('putConfig: unexpected payload ($raw)');
       return;
     }
 
@@ -368,9 +355,7 @@ class DesktopLyricsClient {
     if (channel == null) return;
     try {
       channel.sink.add(msg);
-    } catch (e) {
-      debugPrint(e.toString());
-    }
+    } catch (_) {}
   }
 
   void sendCmd({required String cmdType, Object? cmdData}) {
@@ -382,9 +367,7 @@ class DesktopLyricsClient {
           'cmdData': cmdData,
         }),
       );
-    } catch (e) {
-      debugPrint(e.toString());
-    }
+    } catch (_) {}
   }
 
   /// 收起歌词窗口。
@@ -402,19 +385,21 @@ class DesktopLyricsClient {
     _alwaysOnTopTimer?.cancel();
     _heartbeatTimer?.cancel();
     _heartbeatTimeoutTimer?.cancel();
+
+    _reconnectTimer = null;
+    _alwaysOnTopTimer = null;
+    _heartbeatTimer = null;
+    _heartbeatTimeoutTimer = null;
   }
 
   /// 关掉当前订阅与通道，但保留重连计数
   Future<void> _closeConnection() async {
-    final listen = _listen;
-    final channel = _channel;
-    _listen = null;
-    _channel = null;
     try {
-      await listen?.cancel();
-      await channel?.sink.close(status.normalClosure);
-    } catch (e) {
-      debugPrint(e.toString());
-    }
+      await _listen?.cancel();
+      await _channel?.sink.close(status.normalClosure);
+
+      _listen = null;
+      _channel = null;
+    } catch (_) {}
   }
 }

@@ -106,12 +106,12 @@ class ToolBar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               spacing: 6,
               children: [
-                _ControllerButton(
+                const _ControllerButton(
                   icon: PhosphorIconsLight.plus,
                   tooltip: '字号+',
                   fn: _addFontSize,
                 ),
-                _ControllerButton(
+                const _ControllerButton(
                   icon: PhosphorIconsLight.minus,
                   tooltip: '字号-',
                   fn: _decFontSize,

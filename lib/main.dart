@@ -266,7 +266,7 @@ class _AnimatedLyricSlot extends StatelessWidget {
       layoutBuilder: (currentChild, previousChildren) => Stack(
         alignment: _stackAlignment,
         // 抛弃 previousChildren，避免旧文本瞬间的字形闪烁
-        children: [if (currentChild != null) currentChild],
+        children: [?currentChild],
       ),
       transitionBuilder: (child, value) => FadeTransition(
         opacity: Tween<double>(begin: 0.4, end: 1.0).animate(value),

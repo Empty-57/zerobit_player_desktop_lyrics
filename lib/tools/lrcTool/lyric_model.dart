@@ -39,6 +39,7 @@ sealed class LyricLine {
 /// 整行纯文本歌词（.lrc）。
 final class PlainLyricLine extends LyricLine {
   const PlainLyricLine(this.text);
+
   final String text;
 
   @override
@@ -48,6 +49,7 @@ final class PlainLyricLine extends LyricLine {
 /// 逐字歌词
 final class KaraokeLyricLine extends LyricLine {
   const KaraokeLyricLine(this.words);
+
   final List<WordEntry> words;
 
   @override
