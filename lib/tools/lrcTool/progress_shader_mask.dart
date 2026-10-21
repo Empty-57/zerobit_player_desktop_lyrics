@@ -221,7 +221,7 @@ class RenderProgressShaderMask extends RenderProxyBox {
   @override
   ShaderMaskLayer? get layer => super.layer as ShaderMaskLayer?;
 
-  ui.Shader _buildShader(Rect bounds) {
+  ui.Shader _buildShader(Rect bounds, double progress) {
     // 让分界在 progress 为 0 时完全退到字外，为 1 时推到字尾
     const offsetFactor = -0.666;
     final extent = _axis == Axis.vertical ? bounds.height : bounds.width;
@@ -232,7 +232,7 @@ class RenderProgressShaderMask extends RenderProxyBox {
       stops: const [0.0, 0.333, 0.666],
       transform: _ProgressGradientTransform(
         axis: _axis,
-        offset: extent * offsetFactor * (1 - _effectiveProgress),
+        offset: extent * offsetFactor * (1 - progress),
         scale: _scale,
       ),
     ).createShader(bounds);
@@ -248,10 +248,11 @@ class RenderProgressShaderMask extends RenderProxyBox {
     final bounds = Offset.zero & size;
     if (_shaderDirty || _shader == null || _shaderBounds != bounds) {
       _shader?.dispose();
-      _shader = _buildShader(bounds);
+      final progress = _effectiveProgress;
+      _shader = _buildShader(bounds, progress);
       _shaderBounds = bounds;
       _shaderDirty = false;
-      _paintedProgress = _effectiveProgress;
+      _paintedProgress = progress;
     }
 
     layer ??= ShaderMaskLayer();
