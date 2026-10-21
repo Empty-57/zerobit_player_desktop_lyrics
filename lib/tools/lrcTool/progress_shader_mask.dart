@@ -126,10 +126,8 @@ class RenderProgressShaderMask extends RenderProxyBox {
     _markShaderDirty();
   }
 
-  double get _effectiveProgress => math.min(1.0, _progressListenable.value);
-
   void _onProgress() {
-    if (_paintedProgress != _effectiveProgress) _markShaderDirty();
+    if (_paintedProgress != _progressListenable.value) _markShaderDirty();
   }
 
   @override
@@ -248,7 +246,7 @@ class RenderProgressShaderMask extends RenderProxyBox {
     final bounds = Offset.zero & size;
     if (_shaderDirty || _shader == null || _shaderBounds != bounds) {
       _shader?.dispose();
-      final progress = _effectiveProgress;
+      final progress = _progressListenable.value;
       _shader = _buildShader(bounds, progress);
       _shaderBounds = bounds;
       _shaderDirty = false;
