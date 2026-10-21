@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:signals/signals_flutter.dart';
@@ -19,7 +20,6 @@ final DesktopLyricsClient _lyricsClient = GetIt.I<DesktopLyricsClient>();
 /// 正在演唱的那个字：在底色文本之上推进一条「已唱」的渐变。
 class _HighlightedWord extends StatelessWidget {
   const _HighlightedWord({
-    super.key,
     required this.text,
     required this.progress,
     required this.underStyle,
@@ -34,7 +34,7 @@ class _HighlightedWord extends StatelessWidget {
   });
 
   final String text;
-  final ReadonlySignal<double> progress;
+  final ValueListenable<double> progress;
   final TextStyle underStyle;
   final TextStyle overlayStyle;
   final StrutStyle? strutStyle;
@@ -56,17 +56,15 @@ class _HighlightedWord extends StatelessWidget {
       strokeColor: strokeColor,
     );
 
-    final shaderText = SignalBuilder(
-      builder: (context) => ProgressShaderMask(
-        progress: progress.value,
-        axis: displayMode,
-        scale: scale,
-        begin: begin,
-        end: end,
-        overlayColor: overlayStyle.color!,
-        underColor: underStyle.color!,
-        child: maskedText,
-      ),
+    final shaderText = ProgressShaderMask(
+      progressListenable: progress,
+      axis: displayMode,
+      scale: scale,
+      begin: begin,
+      end: end,
+      overlayColor: overlayStyle.color!,
+      underColor: underStyle.color!,
+      child: maskedText,
     );
 
     if (!useStroke) return shaderText;
@@ -100,6 +98,13 @@ Future<void> _ensureIndexVisible(
   if (index < 0 || index >= keys.length) return;
   final context = keys[index].currentContext;
   if (context == null) return;
+  final position = Scrollable.maybeOf(context)?.position;
+  // 短歌词无需滚动
+  if (position == null ||
+      !position.hasContentDimensions ||
+      position.maxScrollExtent <= position.minScrollExtent) {
+    return;
+  }
   await Scrollable.ensureVisible(
     context,
     duration: const Duration(milliseconds: 200),
@@ -228,19 +233,21 @@ class _KaraokeLineState extends State<_KaraokeLine>
               strokeColor: strokeColor,
             ),
             buildWord: (index, word) => index == currentIndex
-                ? _HighlightedWord(
+                ? RepaintBoundary(
                     key: _wordKeys[index],
-                    text: word.lyricWord,
-                    progress: ctrl.wordProgress,
-                    underStyle: widget.underStyle,
-                    overlayStyle: widget.overlayStyle,
-                    strutStyle: widget.strutStyle,
-                    scale: word.duration >= 1.0 ? 3 : 2,
-                    begin: widget.begin,
-                    end: widget.end,
-                    displayMode: widget.displayMode,
-                    useStroke: useStroke,
-                    strokeColor: strokeColor,
+                    child: _HighlightedWord(
+                      text: word.lyricWord,
+                      progress: ctrl.wordProgress,
+                      underStyle: widget.underStyle,
+                      overlayStyle: widget.overlayStyle,
+                      strutStyle: widget.strutStyle,
+                      scale: word.duration >= 1.0 ? 3 : 2,
+                      begin: widget.begin,
+                      end: widget.end,
+                      displayMode: widget.displayMode,
+                      useStroke: useStroke,
+                      strokeColor: strokeColor,
+                    ),
                   )
                 : TextDisplayWidget(
                     key: _wordKeys[index],

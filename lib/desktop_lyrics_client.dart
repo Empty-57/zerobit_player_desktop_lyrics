@@ -337,11 +337,12 @@ class DesktopLyricsClient {
     final ctrl = _desktopLyricsController;
 
     batch(() {
-      ctrl.currentWordIndex.value = -1;
       if (isNextLine) {
         ctrl.nextLine.value = line;
         ctrl.nextTranslate.value = translate;
       } else {
+        ctrl.currentWordIndex.value = -1;
+        ctrl.wordProgress.value = 0;
         ctrl.currentLine.value = line;
         ctrl.currentTranslate.value = translate;
         // 只有当前行推进计数：双行模式据此轮换槽位

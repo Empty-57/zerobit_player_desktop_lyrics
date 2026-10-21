@@ -18,15 +18,25 @@ TextStyle lyricTextStyle({
 );
 
 /// 描边效果
-TextStyle withLyricStroke(TextStyle style, int strokeColor) => style.copyWith(
-  shadows: [
-    Shadow(
-      color: Color(strokeColor),
-      offset: const Offset(-1.2, -1.2),
-      blurRadius: 1.5,
-    ),
-  ],
-);
+int? _cachedStrokeColor;
+List<Shadow> _cachedStrokeShadows = const [];
+
+List<Shadow> _strokeShadows(int strokeColor) {
+  if (_cachedStrokeColor != strokeColor) {
+    _cachedStrokeColor = strokeColor;
+    _cachedStrokeShadows = [
+      Shadow(
+        color: Color(strokeColor),
+        offset: const Offset(-1.2, -1.2),
+        blurRadius: 1.5,
+      ),
+    ];
+  }
+  return _cachedStrokeShadows;
+}
+
+TextStyle withLyricStroke(TextStyle style, int strokeColor) =>
+    style.copyWith(shadows: _strokeShadows(strokeColor));
 
 /// 工具栏图标尺寸档位。
 enum IconSize {

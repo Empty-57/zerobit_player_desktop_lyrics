@@ -13,6 +13,7 @@ import 'desktop_lyrics_client.dart';
 import 'desktop_lyrics_next_widget.dart';
 import 'desktop_lyrics_widget.dart';
 import 'tool_bar.dart';
+import 'tools/lrcTool/lyric_slot_transition.dart';
 
 final _isHover = signal(false);
 
@@ -97,8 +98,12 @@ class MyApp extends StatelessWidget {
           onExit: (_) => _isHover.value = false,
           child: Stack(
             children: [
-              const Positioned.fill(child: _HoverBackground()),
-              const Positioned.fill(child: _LyricsLayer()),
+              const Positioned.fill(
+                child: RepaintBoundary(child: _HoverBackground()),
+              ),
+              const Positioned.fill(
+                child: RepaintBoundary(child: _LyricsLayer()),
+              ),
               ..._resizeHandleWidgets,
             ],
           ),
@@ -197,7 +202,7 @@ class _LyricsLayer extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: alignment.containerAlignment,
           children: [
-            ToolBar(isHover: _isHover),
+            RepaintBoundary(child: ToolBar(isHover: _isHover)),
             Expanded(child: currSlot),
             nextSlot,
           ],
@@ -260,20 +265,15 @@ class _AnimatedLyricSlot extends StatelessWidget {
   Widget build(BuildContext context) {
     if (animation == LyricSwitchAnimation.none) return child;
 
-    return AnimatedSwitcher(
+    return LyricSlotTransition(
+      version: version,
       duration: const Duration(milliseconds: 500),
-      switchInCurve: Curves.easeOutCubic,
-      layoutBuilder: (currentChild, previousChildren) => Stack(
-        alignment: _stackAlignment,
-        // 抛弃 previousChildren，避免旧文本瞬间的字形闪烁
-        children: [?currentChild],
-      ),
-      transitionBuilder: (child, value) => FadeTransition(
+      alignment: _stackAlignment,
+      transitionBuilder: (value, child) => FadeTransition(
         opacity: Tween<double>(begin: 0.4, end: 1.0).animate(value),
         child: _applyMotion(value, child),
       ),
-      // 用 key 触发动画
-      child: KeyedSubtree(key: ValueKey(version), child: child),
+      child: RepaintBoundary(child: child),
     );
   }
 }
