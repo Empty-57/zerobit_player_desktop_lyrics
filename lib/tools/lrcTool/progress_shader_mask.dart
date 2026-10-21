@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -125,7 +126,7 @@ class RenderProgressShaderMask extends RenderProxyBox {
     _markShaderDirty();
   }
 
-  double get _effectiveProgress => _progressListenable.value.clamp(0.0, 1.0);
+  double get _effectiveProgress => math.min(1.0, _progressListenable.value);
 
   void _onProgress() {
     if (_paintedProgress != _effectiveProgress) _markShaderDirty();

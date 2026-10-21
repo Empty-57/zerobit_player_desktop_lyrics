@@ -233,7 +233,7 @@ class _KaraokeLineState extends State<_KaraokeLine>
               strokeColor: strokeColor,
             ),
             buildWord: (index, word) => index == currentIndex
-                ? RepaintBoundary(
+                ? KeyedSubtree(
                     key: _wordKeys[index],
                     child: _HighlightedWord(
                       text: word.lyricWord,
